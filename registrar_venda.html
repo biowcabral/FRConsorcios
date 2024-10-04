@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar Venda - FR Consórcio</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #f0f0f0;
+        }
+        .sidebar {
+            width: 250px;
+            background-color: #007BFF;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+        .sidebar.hidden {
+            transform: translateX(-220px);
+        }
+        .sidebar .toggle-sidebar-button {
+            position: absolute;
+            top: 10px;
+            right: -40px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: right 0.3s ease;
+        }
+        .sidebar.hidden .toggle-sidebar-button {
+            right: -40px;
+        }
+        .sidebar h2 {
+            margin: 0;
+            margin-bottom: 20px;
+        }
+        .sidebar a {
+            color: white;
+            text-decoration: none;
+            margin: 10px 0;
+            width: 100%;
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .sidebar a:hover {
+            background-color: #0056b3;
+        }
+        .main-content {
+            flex-grow: 1;
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            transition: margin-left 0.3s ease;
+            overflow-y: auto;
+        }
+        .header {
+            background-color: #fff;
+            padding: 10px 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header .user-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .header .user-info i {
+            font-size: 2em;
+            color: #007BFF;
+        }
+        .header .user-info span {
+            margin-top: 5px;
+            font-size: 1em;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            font-weight: bold;
+            color: #555;
+        }
+        .form-group input, .form-group select {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 100%;
+            box-sizing: border-box;
+            max-width: 400px;
+        }
+        .form-group input[type="submit"] {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .form-group input[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+        .btn-submit {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .btn-submit:hover {
+            background-color: #0056b3;
+        }
+        @media (max-width: 768px) {
+            .container {
+                padding: 30px;
+            }
+            .form-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+    <!-- Adicione os scripts do Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyD_YXnid23lFBvvMftPOA8A9iqCMi6Uejs",
+            authDomain: "gescon-684aa.firebaseapp.com",
+            projectId: "gescon-684aa",
+            storageBucket: "gescon-684aa.appspot.com",
+            messagingSenderId: "854894210731",
+            appId: "1:854894210731:web:8fb476fbcb76bd7ec291ee",
+            measurementId: "G-RZKSQ0HPGL"
+        };
+
+        // Inicializar o Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const cpfCliente = localStorage.getItem('cpfCliente');
+            const nomeCompletoCliente = localStorage.getItem('nomeCompletoCliente');
+
+            if (cpfCliente && nomeCompletoCliente) {
+                document.getElementById('clienteInfo').innerHTML = `Nome: ${nomeCompletoCliente}<br>CPF: ${cpfCliente}`;
+            } else {
+                console.error("Dados do cliente não encontrados.");
+            }
+
+            document.getElementById('administradora').addEventListener('change', function() {
+                const administradora = this.value;
+                const produtoSelect = document.getElementById('produto');
+                let produtosArray = [];
+
+                switch (administradora) {
+                    case 'Magalu':
+                        produtosArray = [
+                            'NEGOCIADO - AUTO 50/50 NEGOCIADO',
+                            'NEGOCIADO - CAMINHÃO 50/50 NEGOCIADO',
+                            'NEGOCIADO - IMÓVEL 50/50 NEGOCIADO',
+                            'NEGOCIADO - IMÓVEL LINEAR A',
+                            'NEGOCIADO - IMÓVEL LINEAR B',
+                            'NORMAL - AUTO LINEAR',
+                            'NORMAL - MOTO LINEAR',
+                            'NORMAL - ELETRO LINEAR',
+                            'NORMAL - ELETRO LINEAR',
+                            'NORMAL - IMÓVEL LINEAR',
+                            'NORMAL - CAMINHÃO LINEAR 50/50 REDUZIDA'
+                        ];
+                        break;
+                    case 'Servopa':
+                        produtosArray = [
+                            'IMÓVEIS 100%',
+                            'IMÓVEIS 50%',
+                            'AUTO 100%',
+                            'AUTO 50%'
+                        ];
+                        break;
+                    case 'União':
+                        produtosArray = [
+                            'IMÓVEIS',
+                            'IMÓVEIS MCA',
+                            'AUTOMÓVEIS',
+                            'AUTOMÓVEIS MCA',
+                            'CAMINHÕES',
+                            'IMPLEMENTOS',
+                            'MOTOCICLETAS',
+                            'SERVIÇOS'
+                        ];
+                        break;
+                    case 'Gazin':
+                        produtosArray = [
+                            'ELETRO - LINEAR',
+                            'SERVIÇOS - LINEAR',
+                            'MOTO - LINEAR',
+                            'AUTOMÓVEIS - LINEAR',
+                            'IMÓVEL - LINEAR',
+                            'ELETRO - MEIA PARCELA',
+                            'SERVIÇOS - MEIA PARCELA',
+                            'MOTO - MEIA PARCELA',
+                            'AUTOMÓVEIS - MEIA PARCELA',
+                            'IMÓVEL - MEIA PARCELA'
+                        ];
+                        break;
+                    case 'Zema':
+                        produtosArray = [
+                            'IMOVEL 120X TX20% S/AD TC',
+                            'IMOVEL 144X TX21% S/AD TC',
+                            'IMOVEL 180X TX23% S/AD TC',
+                            'AUTOS 72X TX18% S/AD TC',
+                            'PESADOS 100X TX20% S/AD TC',
+                            'PESADOS 120X TX20% S/AD TC',
+                            'PESADOS 144X TX21% S/AD TC',
+                            'IMOVEL 120X TX20% S/AD TC - PARCELA REDUZIDA',
+                            'IMOVEL 144X TX21% S/AD TC - PARCELA REDUZIDA',
+                            'IMOVEL 180X TX23% S/AD TC - PARCELA REDUZIDA',
+                            'AUTOS 72X TX18% S/AD TC - PARCELA REDUZIDA',
+                            'PESADOS 100X TX20% S/AD TC - PARCELA REDUZIDA',
+                            'PESADOS 120X TX20% S/AD TC - PARCELA REDUZIDA',
+                            'PESADOS 144X TX21% S/AD TC - PARCELA REDUZIDA'
+                        ];
+                        break;
+                    case 'Embracon':
+                        produtosArray = [
+                            'EMBRACON - IMÓVEL LINEAR',
+                            'EMBRACON - AUTO LINEAR'
+                        ];
+                        break;
+                    default:
+                        produtosArray = [];
+                }
+
+                produtoSelect.innerHTML = '';
+                produtosArray.forEach(produto => {
+                    const option = document.createElement('option');
+                    option.value = produto;
+                    option.textContent = produto;
+                    produtoSelect.appendChild(option);
+                });
+            });
+        });
+
+        function registrarVenda(event) {
+            event.preventDefault();
+
+            const clienteInfo = document.getElementById('clienteInfo').innerHTML;
+            const nomeCompleto = clienteInfo.match(/Nome: (.+)<br>/)[1];
+            const cpfCliente = clienteInfo.match(/CPF: (.+)/)[1];
+            const administradora = document.getElementById('administradora').value;
+            const produto = document.getElementById('produto').value;
+            const valorCredito = parseFloat(document.getElementById('valorCredito').value);
+            const vendedor = document.getElementById('vendedor').value;
+            const grupo = document.getElementById('grupo').value;
+            const cota = document.getElementById('cota').value;
+            const dataHoraCadastro = new Date();
+
+            if (nomeCompleto && administradora && produto && !isNaN(valorCredito) && vendedor && grupo && cota) {
+                const venda = {
+                    nomeCompleto,
+                    cpf: cpfCliente,
+                    administradora,
+                    produto,
+                    valorCredito,
+                    vendedor,
+                    grupo,
+                    cota,
+                    dataHoraCadastro
+                };
+
+                // Salvar venda no Firestore
+                db.collection("vendas")
+                    .add(venda)
+                    .then(() => {
+                        alert("Venda cadastrada com sucesso!");
+                        document.getElementById('registrarVendaForm').reset();
+                    })
+                    .catch((error) => {
+                        console.error("Erro ao cadastrar venda: ", error);
+                        alert("Erro ao cadastrar venda.");
+                    });
+            } else {
+                alert("Por favor, preencha todos os campos.");
+            }
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('hidden');
+        }
+    </script>
+</head>
+<body>
+    <div class="sidebar" id="sidebar">
+        <button class="toggle-sidebar-button" onclick="toggleSidebar()">☰</button>
+        <h2>FR Consórcio</h2>
+        <a href="dashboard.html">Home</a>
+        <a href="cadastro_cliente.html">Cadastrar Cliente</a>
+        <a href="consultar_cliente.html">Consultar Cliente</a>
+        <a href="relatorio_vendas.html">Relatório Vendas</a>
+        <a href="#">Relatório de Clientes</a>
+        <a href="#">Emitir Boletos</a>
+        <a href="#">Lançar Lance em Lote</a>
+        <a href="#">Cadastrar Usuário</a>
+    </div>
+    <div class="main-content" id="mainContent">
+        <div class="header">
+            <div class="info-cards">
+                <div class="info-card">
+                    <h2>Registrar Venda</h2>
+                </div>
+            </div>
+            <div class="user-info">
+                <i class="fas fa-user fa-2x"></i>
+                <span>Nome do Usuário</span>
+            </div>
+        </div>
+        <div class="container">
+            <h2>Registrar Venda</h2>
+            <form id="registrarVendaForm" onsubmit="registrarVenda(event)">
+                <div class="form-group">
+                    <label for="clienteInfo">Cliente</label>
+                    <span id="clienteInfo"></span>
+                </div>
+                <div class="form-group">
+                    <label for="administradora">Administradora</label>
+                    <select id="administradora" name="administradora" required>
+                        <option value="">Selecione</option>
+                        <option value="Magalu">Magalu</option>
+                        <option value="Servopa">Servopa</option>
+                        <option value="União">União</option>
+                        <option value="Gazin">Gazin</option>
+                        <option value="Zema">Zema</option>
+                        <option value="Embracon">Embracon</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="produto">Produto</label>
+                    <select id="produto" name="produto" required>
+                        <option value="">Selecione</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="valorCredito">Valor do Crédito</label>
+                    <input type="number" id="valorCredito" name="valorCredito" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="vendedor">Vendedor</label>
+                    <input type="text" id="vendedor" name="vendedor" required>
+                </div>
+                <div class="form-group">
+                    <label for="grupo">Grupo</label>
+                    <input type="text" id="grupo" name="grupo" required>
+                </div>
+                <div class="form-group">
+                    <label for="cota">Cota</label>
+                    <input type="text" id="cota" name="cota" required>
+                </div>
+                <div class="form-group">
+                    <input type="submit" class="btn-submit" value="Registrar Venda">
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

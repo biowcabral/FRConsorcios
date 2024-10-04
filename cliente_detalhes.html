@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalhes do Cliente - FR Consórcio</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #f0f0f0;
+        }
+        .sidebar {
+            width: 250px;
+            background-color: #007BFF;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+        .sidebar.hidden {
+            transform: translateX(-220px);
+        }
+        .sidebar .toggle-sidebar-button {
+            position: absolute;
+            top: 10px;
+            right: -40px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: right 0.3s ease;
+        }
+        .sidebar.hidden .toggle-sidebar-button {
+            right: -40px;
+        }
+        .sidebar h2 {
+            margin: 0;
+            margin-bottom: 20px;
+        }
+        .sidebar a {
+            color: white;
+            text-decoration: none;
+            margin: 10px 0;
+            width: 100%;
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .sidebar a:hover {
+            background-color: #0056b3;
+        }
+        .main-content {
+            flex-grow: 1;
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            transition: margin-left 0.3s ease;
+            overflow-y: auto;
+        }
+        .header {
+            background-color: #fff;
+            padding: 10px 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header .user-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .header .user-info i {
+            font-size: 2em;
+            color: #007BFF;
+        }
+        .header .user-info span {
+            margin-top: 5px;
+            font-size: 1em;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            text-align: center;
+        }
+        .cliente-detalhes {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .cliente-detalhes .info-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 10px;
+        }
+        .cliente-detalhes .info-group label {
+            font-weight: bold;
+            color: #333;
+        }
+        .cliente-detalhes .info-group span {
+            color: #555;
+        }
+        .cliente-detalhes .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .cliente-detalhes .actions button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .cliente-detalhes .actions button.edit {
+            background-color: #007BFF;
+            color: white;
+        }
+        .cliente-detalhes .actions button.edit:hover {
+            background-color: #0056b3;
+        }
+        .cliente-detalhes .actions button.delete {
+            background-color: #FF0000;
+            color: white;
+        }
+        .cliente-detalhes .actions button.delete:hover {
+            background-color: #cc0000;
+        }
+        .cliente-detalhes .actions button.venda,
+        .cliente-detalhes .actions button.boleto,
+        .cliente-detalhes .actions button.lance {
+            background-color: #28a745;
+            color: white;
+        }
+        .cliente-detalhes .actions button.venda:hover,
+        .cliente-detalhes .actions button.boleto:hover,
+        .cliente-detalhes .actions button.lance:hover {
+            background-color: #218838;
+        }
+    </style>
+    <!-- Adicione os scripts do Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyD_YXnid23lFBvvMftPOA8A9iqCMi6Uejs",
+            authDomain: "gescon-684aa.firebaseapp.com",
+            projectId: "gescon-684aa",
+            storageBucket: "gescon-684aa.appspot.com",
+            messagingSenderId: "854894210731",
+            appId: "1:854894210731:web:8fb476fbcb76bd7ec291ee",
+            measurementId: "G-RZKSQ0HPGL"
+        };
+
+        // Inicializar o Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        async function buscarCliente(cpf) {
+            try {
+                const docRef = db.collection("clientes").doc(cpf);
+                const doc = await docRef.get();
+                if (doc.exists) {
+                    const cliente = doc.data();
+                    document.getElementById('clienteNome').innerText = cliente.nomeCompleto;
+                    document.getElementById('clienteCpf').innerText = cliente.cpf;
+                    document.getElementById('clienteTelefone').innerText = cliente.numeroTelefone;
+                    document.getElementById('clienteEndereco').innerText = `${cliente.rua}, ${cliente.numeroCasa}, ${cliente.complemento}, ${cliente.cidade}, ${cliente.estado}, ${cliente.cep}`;
+
+                    // Armazenar dados do cliente no localStorage
+                    localStorage.setItem('cpfCliente', cliente.cpf);
+                    localStorage.setItem('nomeCompletoCliente', cliente.nomeCompleto);
+                } else {
+                    alert("Cliente não encontrado.");
+                }
+            } catch (error) {
+                console.error("Erro ao buscar cliente: ", error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const cpf = urlParams.get('cpf');
+            if (cpf) {
+                buscarCliente(cpf);
+            }
+        });
+
+        function registrarVenda() {
+            window.location.href = 'registrar_venda.html';
+        }
+    </script>
+</head>
+<body>
+    <div class="sidebar" id="sidebar">
+        <button class="toggle-sidebar-button" onclick="toggleSidebar()">☰</button>
+        <h2>FR Consórcio</h2>
+        <a href="dashboard.html">Home</a>
+        <a href="cadastro_cliente.html">Cadastrar Cliente</a>
+        <a href="consultar_cliente.html">Consultar Cliente</a>
+        <a href="relatorio_vendas.html">Relatório Vendas</a>
+        <a href="#">Relatório de Clientes</a>
+        <a href="#">Emitir Boletos</a>
+        <a href="#">Lançar Lance em Lote</a>
+        <a href="#">Cadastrar Usuário</a>
+    </div>
+    <div class="main-content" id="mainContent">
+        <div class="header">
+            <div class="info-cards">
+                <div class="info-card">
+                    <h2>Detalhes do Cliente</h2>
+                </div>
+            </div>
+            <div class="user-info">
+                <i class="fas fa-user fa-2x"></i>
+                <span>Nome do Usuário</span>
+            </div>
+        </div>
+        <div class="container">
+            <h2>Detalhes do Cliente</h2>
+            <div class="cliente-detalhes">
+                <div class="info-group">
+                    <label>Nome Completo:</label>
+                    <span id="clienteNome"></span>
+                </div>
+                <div class="info-group">
+                    <label>CPF:</label>
+                    <span id="clienteCpf"></span>
+                </div>
+                <div class="info-group">
+                    <label>Telefone:</label>
+                    <span id="clienteTelefone"></span>
+                </div>
+                <div class="info-group">
+                    <label>Endereço:</label>
+                    <span id="clienteEndereco"></span>
+                </div>
+                <div class="actions">
+                    <button class="edit">Editar</button>
+                    <button class="delete">Excluir</button>
+                    <button class="venda" onclick="registrarVenda()">Registrar Venda</button>
+                    <button class="boleto">Emitir Boleto</button>
+                    <button class="lance">Lançar Lance</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('hidden');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro - FR Consórcio</title>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .register-container {
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .register-container img {
+            width: 100%;
+            max-width: 150px;
+            height: auto;
+            margin-bottom: 30px;
+        }
+        .register-container h1 {
+            margin-bottom: 30px;
+            font-size: 24px;
+            color: #333;
+        }
+        .register-container input {
+            width: 100%;
+            max-width: 300px;
+            padding: 15px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+        .register-container button {
+            width: 100%;
+            max-width: 300px;
+            padding: 15px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        .register-container button:hover {
+            background-color: #218838;
+        }
+        .error-message {
+            color: red;
+            display: none;
+            max-width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <img src="logo.jpeg" alt="Logo"> <!-- Substitua "logo.jpeg" pelo caminho da sua imagem -->
+        <h1>Registro</h1>
+        <input type="text" id="name" placeholder="Nome" required>
+        <input type="email" id="email" placeholder="Email" required>
+        <input type="password" id="password" placeholder="Senha" required>
+        <input type="password" id="confirmPassword" placeholder="Confirme a Senha" required>
+        <button id="registerButton">Registrar</button>
+        <p class="error-message" id="errorMessage"></p>
+    </div>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-auth.js"></script>
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyD_YXnid23lFBvvMftPOA8A9iqCMi6Uejs",
+            authDomain: "gescon-684aa.firebaseapp.com",
+            projectId: "gescon-684aa",
+            storageBucket: "gescon-684aa.appspot.com",
+            messagingSenderId: "854894210731",
+            appId: "1:854894210731:web:8fb476fbcb76bd7ec291ee",
+            measurementId: "G-RZKSQ0HPGL"
+        };
+        // Inicializa o Firebase
+        firebase.initializeApp(firebaseConfig);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const registerButton = document.getElementById('registerButton');
+            registerButton.addEventListener('click', () => {
+                const name = document.getElementById('name').value;
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
+                const errorMessage = document.getElementById('errorMessage');
+
+                if (password !== confirmPassword) {
+                    errorMessage.textContent = "As senhas não coincidem.";
+                    errorMessage.style.display = "block";
+                    return;
+                }
+
+                firebase.auth().createUserWithEmailAndPassword(email, password)
+                    .then((userCredential) => {
+                        // Registro bem-sucedido
+                        const user = userCredential.user;
+                        user.updateProfile({
+                            displayName: name
+                        }).then(() => {
+                            window.location.href = 'index.html'; // Redirecionar para a página de login
+                        });
+                    })
+                    .catch((error) => {
+                        // Exibir mensagem de erro
+                        errorMessage.textContent = error.message;
+                        errorMessage.style.display = "block";
+                    });
+            });
+        });
+    </script>
+</body>
+</html>

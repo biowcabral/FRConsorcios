@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - FR Consórcio</title>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .login-container {
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .login-container img {
+            width: 100%;
+            max-width: 150px;
+            height: auto;
+            margin-bottom: 30px;
+        }
+        .login-container h1 {
+            margin-bottom: 30px;
+            font-size: 24px;
+            color: #333;
+        }
+        .login-container input {
+            width: 100%;
+            max-width: 300px;
+            padding: 15px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+        .login-container button {
+            width: 100%;
+            max-width: 300px;
+            padding: 15px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        .login-container button:hover {
+            background-color: #0056b3;
+        }
+        .register-link {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #007BFF;
+            text-decoration: none;
+        }
+        .register-link:hover {
+            text-decoration: underline;
+        }
+        .error-message {
+            color: red;
+            margin-top: 10px;
+            max-width: 300px;
+        }
+    </style>
+    <!-- Adicione os scripts do Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyD_YXnid23lFBvvMftPOA8A9iqCMi6Uejs",
+            authDomain: "gescon-684aa.firebaseapp.com",
+            projectId: "gescon-684aa",
+            storageBucket: "gescon-684aa.appspot.com",
+            messagingSenderId: "854894210731",
+            appId: "1:854894210731:web:8fb476fbcb76bd7ec291ee",
+            measurementId: "G-RZKSQ0HPGL"
+        };
+
+        // Inicializar o Firebase
+        firebase.initializeApp(firebaseConfig);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginForm = document.getElementById('loginForm');
+            loginForm.addEventListener('submit', (event) => {
+                event.preventDefault();
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                const errorMessage = document.getElementById('errorMessage');
+
+                firebase.auth().signInWithEmailAndPassword(email, password)
+                    .then((userCredential) => {
+                        // Login bem-sucedido
+                        window.location.href = 'dashboard.html'; // Redirecionar para a página do dashboard
+                    })
+                    .catch((error) => {
+                        // Exibir mensagem de erro
+                        errorMessage.textContent = error.message;
+                    });
+            });
+        });
+    </script>
+</head>
+<body>
+    <div class="login-container">
+        <img src="logo.jpeg" alt="Logo FR Consórcio">
+        <h1>Login</h1>
+        <form id="loginForm">
+            <input type="email" id="email" placeholder="Email" required>
+            <input type="password" id="password" placeholder="Senha" required>
+            <button type="submit">Entrar</button>
+            <div id="errorMessage" class="error-message"></div>
+        </form>
+        <a href="register.html" class="register-link">Registre-se</a>
+    </div>
+</body>
+</html>

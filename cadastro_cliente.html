@@ -308,7 +308,7 @@
                     </div>
                     <div class="form-group">
                         <label for="telefone">Número de Telefone</label>
-                        <input type="text" id="telefone" name="telefone">
+                        <input type="text" id="telefone" name="telefone" required>
                     </div>
                     <div class="form-group">
                         <button type="button" class="btn-submit" onclick="showSection(2)">Próximo</button>
@@ -401,11 +401,17 @@
     
             const nomeCompleto = document.getElementById('nomeCompleto').value;
             const cpf = document.getElementById('cpf').value;
+            const telefone = document.getElementById('telefone').value;
+
+            if (nomeCompleto === "" || cpf === "" || telefone === "") {
+                alert("Por favor, preencha todos os campos obrigatórios.");
+                return;
+            }
+    
             const rg = document.getElementById('rg').value;
             const dataNascimento = document.getElementById('dataNascimento').value;
             const nomePai = document.getElementById('nomePai').value;
             const nomeMae = document.getElementById('nomeMae').value;
-            const telefone = document.getElementById('telefone').value;
             const cep = document.getElementById('cep').value;
             const rua = document.getElementById('rua').value;
             const numero = document.getElementById('numero').value;
@@ -417,11 +423,6 @@
             const conta = document.getElementById('conta').value;
             const digito = document.getElementById('digito').value;
             const tipoConta = document.getElementById('tipoConta').value;
-    
-            if (nomeCompleto === "" || cpf === "" || rg === "" || dataNascimento === "" || nomePai === "" || nomeMae === "" || telefone === "" || cep === "" || rua === "" || numero === "" || cidade === "" || estado === "" || banco === "" || agencia === "" || conta === "" || digito === "" || tipoConta === "") {
-                alert("Por favor, preencha todos os campos.");
-                return;
-            }
     
             try {
                 // Verificar se o CPF já existe

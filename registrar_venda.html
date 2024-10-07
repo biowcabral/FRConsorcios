@@ -97,6 +97,9 @@
             font-size: 1em;
             color: #333;
         }
+        .header .profile-icon {
+            cursor: pointer;
+        }
         .container {
             max-width: 800px;
             margin: 20px auto;
@@ -353,6 +356,11 @@
                 <i class="fas fa-user fa-2x"></i>
                 <span>Nome do Usuário</span>
             </div>
+            <div class="profile-icon">
+                <a href="gerenciar_dados.html">
+                    <img src="logo.jpeg" alt="Perfil" style="width: 40px; height: 40px; border-radius: 50%;">
+                </a>
+            </div>
         </div>
         <div class="container">
             <h2>Registrar Venda</h2>
@@ -385,7 +393,14 @@
                 </div>
                 <div class="form-group">
                     <label for="vendedor">Vendedor</label>
-                    <input type="text" id="vendedor" name="vendedor" required>
+                    <select id="vendedor" name="vendedor" required>
+                        <option value="">Selecione</option>
+                        <option value="Caio">Caio</option>
+                        <option value="Dara">Dara</option>
+                        <option value="Felipe">Felipe</option>
+                        <option value="Julio">Julio</option>
+                        <option value="Marcio">Marcio</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label for="grupo">Grupo</label>

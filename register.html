@@ -39,7 +39,7 @@
         }
         .register-container input {
             width: 100%;
-            max-width: 300px;
+            max-width: 350px;
             padding: 15px;
             margin: 10px 0;
             border: 1px solid #ddd;
@@ -48,9 +48,9 @@
         }
         .register-container button {
             width: 100%;
-            max-width: 300px;
+            max-width: 350px;
             padding: 15px;
-            background-color: #28a745;
+            background-color: #007BFF;
             color: white;
             border: none;
             border-radius: 10px;
@@ -59,28 +59,18 @@
             transition: background-color 0.3s;
         }
         .register-container button:hover {
-            background-color: #218838;
+            background-color: #0056b3;
         }
         .error-message {
             color: red;
             display: none;
-            max-width: 300px;
+            max-width: 350px;
         }
     </style>
-</head>
-<body>
-    <div class="register-container">
-        <img src="logo.jpeg" alt="Logo"> <!-- Substitua "logo.jpeg" pelo caminho da sua imagem -->
-        <h1>Registro</h1>
-        <input type="text" id="name" placeholder="Nome" required>
-        <input type="email" id="email" placeholder="Email" required>
-        <input type="password" id="password" placeholder="Senha" required>
-        <input type="password" id="confirmPassword" placeholder="Confirme a Senha" required>
-        <button id="registerButton">Registrar</button>
-        <p class="error-message" id="errorMessage"></p>
-    </div>
-    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-auth.js"></script>
+    <!-- Adicione os scripts do Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script>
         // Configuração do Firebase
         const firebaseConfig = {
@@ -92,41 +82,59 @@
             appId: "1:854894210731:web:8fb476fbcb76bd7ec291ee",
             measurementId: "G-RZKSQ0HPGL"
         };
-        // Inicializa o Firebase
+
+        // Inicializar o Firebase
         firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
 
         document.addEventListener('DOMContentLoaded', () => {
-            const registerButton = document.getElementById('registerButton');
-            registerButton.addEventListener('click', () => {
+            const registerForm = document.getElementById('registerForm');
+            registerForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+
                 const name = document.getElementById('name').value;
+                const cpf = document.getElementById('cpf').value;
+                const birthdate = document.getElementById('birthdate').value;
                 const email = document.getElementById('email').value;
                 const password = document.getElementById('password').value;
-                const confirmPassword = document.getElementById('confirmPassword').value;
                 const errorMessage = document.getElementById('errorMessage');
 
-                if (password !== confirmPassword) {
-                    errorMessage.textContent = "As senhas não coincidem.";
-                    errorMessage.style.display = "block";
-                    return;
-                }
-
-                firebase.auth().createUserWithEmailAndPassword(email, password)
+                auth.createUserWithEmailAndPassword(email, password)
                     .then((userCredential) => {
-                        // Registro bem-sucedido
                         const user = userCredential.user;
-                        user.updateProfile({
-                            displayName: name
-                        }).then(() => {
-                            window.location.href = 'index.html'; // Redirecionar para a página de login
+                        return db.collection('users').doc(user.uid).set({
+                            name: name,
+                            cpf: cpf,
+                            birthdate: birthdate,
+                            email: email
                         });
                     })
+                    .then(() => {
+                        alert("Usuário registrado com sucesso!");
+                        window.location.href = "dashboard.html";
+                    })
                     .catch((error) => {
-                        // Exibir mensagem de erro
                         errorMessage.textContent = error.message;
                         errorMessage.style.display = "block";
                     });
             });
         });
     </script>
+</head>
+<body>
+    <div class="register-container">
+        <img src="logo.jpeg" alt="Logo FR Consórcio">
+        <h1>Registro</h1>
+        <form id="registerForm">
+            <input type="text" id="name" placeholder="Nome Completo" required>
+            <input type="text" id="cpf" placeholder="CPF" required>
+            <input type="date" id="birthdate" placeholder="Data de Nascimento" required>
+            <input type="email" id="email" placeholder="Email" required>
+            <input type="password" id="password" placeholder="Senha" required>
+            <button type="submit">Registrar</button>
+            <p class="error-message" id="errorMessage"></p>
+        </form>
+    </div>
 </body>
 </html>

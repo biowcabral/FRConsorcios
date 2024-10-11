@@ -185,6 +185,7 @@
     </style>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
     <script>
         // Configuração do Firebase
@@ -201,9 +202,17 @@
         // Inicializar o Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
+        const auth = firebase.auth();
 
         document.addEventListener('DOMContentLoaded', () => {
-            loadSalesData();
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    loadSalesData();
+                    document.getElementById('userName').textContent = user.displayName || 'Usuário';
+                } else {
+                    window.location.href = 'login.html'; // Redirecionar para a página de login se não estiver autenticado
+                }
+            });
 
             document.getElementById('filterForm').addEventListener('submit', (event) => {
                 event.preventDefault();
@@ -228,41 +237,52 @@
             const startDate = document.getElementById('startDate').value;
             const endDate = document.getElementById('endDate').value;
 
-            let query = db.collection("vendas");
+            let query = db.collectionGroup("vendas");
 
             if (administradora) {
+                console.log(`Filtrando por administradora: ${administradora}`);
                 query = query.where('administradora', '==', administradora);
             }
 
             if (vendedor) {
+                console.log(`Filtrando por vendedor: ${vendedor}`);
                 query = query.where('vendedor', '==', vendedor);
             }
 
             if (startDate) {
+                console.log(`Filtrando por data de início: ${startDate}`);
                 query = query.where('dataHoraCadastro', '>=', new Date(startDate));
             }
 
             if (endDate) {
+                console.log(`Filtrando por data de fim: ${endDate}`);
                 query = query.where('dataHoraCadastro', '<=', new Date(endDate));
             }
 
+            console.log("Consulta final:", query);
+
             query.get().then((querySnapshot) => {
-                querySnapshot.forEach((doc) => {
-                    const venda = doc.data();
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${venda.nomeCompleto}</td>
-                        <td>${venda.cpf}</td>
-                        <td>${venda.administradora}</td>
-                        <td>${venda.produto}</td>
-                        <td>${venda.valorCredito}</td>
-                        <td>${venda.vendedor}</td>
-                        <td>${venda.grupo}</td>
-                        <td>${venda.cota}</td>
-                        <td>${new Date(venda.dataHoraCadastro.seconds * 1000).toLocaleString()}</td>
-                    `;
-                    salesData.appendChild(row);
-                });
+                if (querySnapshot.empty) {
+                    console.log("Nenhuma venda encontrada com os filtros aplicados.");
+                } else {
+                    querySnapshot.forEach((doc) => {
+                        const venda = doc.data();
+                        const formattedValue = `R$ ${venda.valorCredito.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }).replace('R$', '').trim()}`;
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${venda.nomeCompleto}</td>
+                            <td>${venda.cpf}</td>
+                            <td>${venda.administradora}</td>
+                            <td>${venda.produto}</td>
+                            <td>${formattedValue}</td>
+                            <td>${venda.vendedor}</td>
+                            <td>${venda.grupo}</td>
+                            <td>${venda.cota}</td>
+                            <td>${new Date(venda.dataHoraCadastro.seconds * 1000).toLocaleString()}</td>
+                        `;
+                        salesData.appendChild(row);
+                    });
+                }
             }).catch((error) => {
                 console.error("Erro ao obter dados de vendas: ", error);
             });
@@ -301,8 +321,11 @@
                 </div>
             </div>
             <div class="user-info">
-                <i class="fas fa-user fa-2x"></i>
-                <span>Nome do Usuário</span>
+                <a href="gerenciar_dados.html" class="profile-link">
+                    <img src="user-avatar.jpeg" alt="Perfil" style="width: 40px; height: 40px; border-radius: 50%;">
+                    <br>
+                    <span id="userName">Nome do Usuário</span> <!-- Nome inicial será atualizado pelo Firebase -->
+                </a>
             </div>
         </div>
         <div class="container">
@@ -325,7 +348,11 @@
                     <label for="vendedorFilter">Vendedor</label>
                     <select id="vendedorFilter" name="vendedorFilter">
                         <option value="">Todos</option>
-                        <!-- Adicione opções de vendedores dinamicamente se necessário -->
+                        <option value="Caio">Caio</option>
+                        <option value="Dara">Dara</option>
+                        <option value="Felipe">Felipe</option>
+                        <option value="Julio">Julio</option>
+                        <option value="Marcio">Marcio</option>
                     </select>
                 </div>
                 <div class="filters-row">
@@ -357,11 +384,7 @@
                     </tbody>
                 </table>
             </div>
-            <div class="chart-container">
-                <canvas id="salesChart"></canvas>
-            </div>
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </body>
 </html>

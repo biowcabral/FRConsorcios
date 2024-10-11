@@ -79,6 +79,7 @@
     <!-- Adicione os scripts do Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script>
         // Configuração do Firebase
         const firebaseConfig = {
@@ -93,19 +94,40 @@
 
         // Inicializar o Firebase
         firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
 
         document.addEventListener('DOMContentLoaded', () => {
             const loginForm = document.getElementById('loginForm');
             loginForm.addEventListener('submit', (event) => {
                 event.preventDefault();
+
                 const email = document.getElementById('email').value;
                 const password = document.getElementById('password').value;
                 const errorMessage = document.getElementById('errorMessage');
 
-                firebase.auth().signInWithEmailAndPassword(email, password)
+                auth.signInWithEmailAndPassword(email, password)
                     .then((userCredential) => {
                         // Login bem-sucedido
-                        window.location.href = 'dashboard.html'; // Redirecionar para a página do dashboard
+                        const user = userCredential.user;
+                        db.collection('users').doc(user.uid).get().then((doc) => {
+                            if (doc.exists) {
+                                const role = doc.data().role;
+                                if (role === 'admin') {
+                                    window.location.href = 'dashboard.html'; // Redirecionar para a página do dashboard
+                                } else if (role === 'vendedor') {
+                                    window.location.href = 'vendedor_dashboard.html'; // Redirecionar para a página do vendedor
+                                } else if (role === 'make_integration') {
+                                    window.location.href = 'integration_dashboard.html'; // Redirecionar para a página de integração
+                                } else {
+                                    errorMessage.textContent = 'Papel do usuário não reconhecido.';
+                                }
+                            } else {
+                                errorMessage.textContent = 'Usuário não encontrado no banco de dados.';
+                            }
+                        }).catch((error) => {
+                            errorMessage.textContent = `Erro ao obter dados do usuário: ${error.message}`;
+                        });
                     })
                     .catch((error) => {
                         // Exibir mensagem de erro

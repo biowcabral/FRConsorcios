@@ -71,7 +71,8 @@
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
-            width: 100%;
+            width: calc(100% - 250px);
+            margin-left: 250px;
             transition: margin-left 0.3s ease;
             overflow-y: auto;
         }
@@ -153,6 +154,10 @@
             background-color: #0056b3;
         }
         @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
             .container {
                 padding: 30px;
             }
@@ -164,6 +169,7 @@
     <!-- Adicione os scripts do Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script>
         // Configuração do Firebase
         const firebaseConfig = {
@@ -179,6 +185,11 @@
         // Inicializar o Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
+
+        // Autenticação anônima
+        firebase.auth().signInAnonymously().catch((error) => {
+            console.error("Erro ao autenticar anonimamente: ", error);
+        });
 
         document.addEventListener('DOMContentLoaded', () => {
             const cpfCliente = localStorage.getItem('cpfCliente');
@@ -311,7 +322,7 @@
                 };
 
                 // Salvar venda no Firestore
-                db.collection("vendas")
+                db.collection("clientes").doc(cpfCliente).collection("vendas")
                     .add(venda)
                     .then(() => {
                         alert("Venda cadastrada com sucesso!");
@@ -353,12 +364,10 @@
                 </div>
             </div>
             <div class="user-info">
-                <i class="fas fa-user fa-2x"></i>
-                <span>Nome do Usuário</span>
-            </div>
-            <div class="profile-icon">
-                <a href="gerenciar_dados.html">
-                    <img src="logo.jpeg" alt="Perfil" style="width: 40px; height: 40px; border-radius: 50%;">
+                <a href="gerenciar_dados.html" class="profile-link">
+                    <img src="user-avatar.jpeg" alt="Perfil" style="width: 40px; height: 40px; border-radius: 50%;">
+                    <br>
+                    <span id="userName">Nome do Usuário</span> <!-- Nome inicial será atualizado pelo Firebase -->
                 </a>
             </div>
         </div>
@@ -394,7 +403,6 @@
                 <div class="form-group">
                     <label for="vendedor">Vendedor</label>
                     <select id="vendedor" name="vendedor" required>
-                        <option value="">Selecione</option>
                         <option value="Caio">Caio</option>
                         <option value="Dara">Dara</option>
                         <option value="Felipe">Felipe</option>

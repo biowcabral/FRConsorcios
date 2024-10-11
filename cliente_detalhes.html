@@ -163,10 +163,52 @@
         .cliente-detalhes .actions button.lance:hover {
             background-color: #218838;
         }
+        .modifications, .sales {
+            margin-top: 20px;
+        }
+        .modifications h3, .sales h3 {
+            margin-bottom: 10px;
+        }
+        .modifications ul, .sales ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .modifications ul li, .sales ul li {
+            background-color: #f9f9f9;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modifications ul li .delete-note {
+            background: none;
+            border: none;
+            color: #FF0000;
+            cursor: pointer;
+            font-size: 1.2em;
+        }
+        .notes {
+            margin-top: 20px;
+        }
+        .notes textarea {
+            width: 100%;
+            height: 100px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            resize: vertical;
+        }
+        .notes input[type="file"] {
+            margin-top: 10px;
+        }
     </style>
     <!-- Adicione os scripts do Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
     <script>
         // Configuração do Firebase
         const firebaseConfig = {
@@ -182,39 +224,99 @@
         // Inicializar o Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
+        const storage = firebase.storage();
 
-        async function buscarCliente(cpf) {
-            try {
-                const docRef = db.collection("clientes").doc(cpf);
-                const doc = await docRef.get();
-                if (doc.exists) {
-                    const cliente = doc.data();
-                    document.getElementById('clienteNome').innerText = cliente.nomeCompleto;
-                    document.getElementById('clienteCpf').innerText = cliente.cpf;
-                    document.getElementById('clienteTelefone').innerText = cliente.numeroTelefone;
-                    document.getElementById('clienteEndereco').innerText = `${cliente.rua}, ${cliente.numeroCasa}, ${cliente.complemento}, ${cliente.cidade}, ${cliente.estado}, ${cliente.cep}`;
+        document.addEventListener('DOMContentLoaded', () => {
+            // Recuperar dados do localStorage
+            const cpf = localStorage.getItem('cpfCliente');
+            const nome = localStorage.getItem('nomeCompletoCliente');
+            const telefone = localStorage.getItem('telefoneCliente');
+            const endereco = localStorage.getItem('enderecoCliente');
 
-                    // Armazenar dados do cliente no localStorage
-                    localStorage.setItem('cpfCliente', cliente.cpf);
-                    localStorage.setItem('nomeCompletoCliente', cliente.nomeCompleto);
+            // Exibir dados na página
+            document.getElementById('clienteCpf').innerText = cpf;
+            document.getElementById('clienteNome').innerText = nome;
+            document.getElementById('clienteTelefone').innerText = telefone;
+            document.getElementById('clienteEndereco').innerText = endereco;
+
+            document.getElementById('salvarAnotacaoBtn').addEventListener('click', () => {
+                const anotacao = document.getElementById('anotacoes').value;
+                if (anotacao.trim() !== '') {
+                    salvarAnotacao(cpf, anotacao);
                 } else {
-                    alert("Cliente não encontrado.");
+                    alert('Por favor, escreva uma anotação.');
                 }
+            });
+
+            document.getElementById('anexos').addEventListener('change', (event) => {
+                const arquivos = event.target.files;
+                if (arquivos.length > 0) {
+                    for (const arquivo of arquivos) {
+                        salvarArquivo(cpf, arquivo);
+                    }
+                }
+            });
+        });
+
+        async function salvarAnotacao(cpf, anotacao) {
+            try {
+                await db.collection('clientes').doc(cpf).collection('anotacoes').add({
+                    anotacao: anotacao,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                alert('Anotação salva com sucesso!');
+                location.reload(); // Recarregar a página para atualizar a lista de anotações
             } catch (error) {
-                console.error("Erro ao buscar cliente: ", error);
+                console.error('Erro ao salvar anotação:', error);
+                alert('Erro ao salvar anotação. Tente novamente.');
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const cpf = urlParams.get('cpf');
-            if (cpf) {
-                buscarCliente(cpf);
+        async function salvarArquivo(cpf, arquivo) {
+            try {
+                const storageRef = storage.ref();
+                const fileRef = storageRef.child(`clientes/${cpf}/${arquivo.name}`);
+                await fileRef.put(arquivo);
+                const fileURL = await fileRef.getDownloadURL();
+                await db.collection('clientes').doc(cpf).collection('arquivos').add({
+                    nome: arquivo.name,
+                    url: fileURL,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                alert('Arquivo salvo com sucesso!');
+            } catch (error) {
+                console.error('Erro ao salvar arquivo:', error);
+                alert('Erro ao salvar arquivo. Tente novamente.');
             }
-        });
+        }
 
         function registrarVenda() {
             window.location.href = 'registrar_venda.html';
+        }
+
+        function editarCliente() {
+            const cpf = localStorage.getItem('cpfCliente');
+            window.location.href = `editar_cliente.html?cpf=${cpf}`;
+        }
+
+        async function atualizarEtapaFunil(event) {
+            event.preventDefault();
+            const cpf = localStorage.getItem('cpfCliente');
+            const funnelStage = document.getElementById('funnelStage').value;
+
+            try {
+                await db.collection('clientes').doc(cpf).update({
+                    etapaFunil: funnelStage
+                });
+                alert('Etapa do funil atualizada com sucesso!');
+            } catch (error) {
+                console.error('Erro ao atualizar etapa do funil:', error);
+                alert('Erro ao atualizar etapa do funil. Tente novamente.');
+            }
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('hidden');
         }
     </script>
 </head>
@@ -239,8 +341,11 @@
                 </div>
             </div>
             <div class="user-info">
-                <i class="fas fa-user fa-2x"></i>
-                <span>Nome do Usuário</span>
+                <a href="gerenciar_dados.html" class="profile-link">
+                    <img src="user-avatar.jpeg" alt="Perfil" style="width: 40px; height: 40px; border-radius: 50%;">
+                    <br>
+                    <span id="userName">Nome do Usuário</span> <!-- Nome inicial será atualizado pelo Firebase -->
+                </a>
             </div>
         </div>
         <div class="container">
@@ -262,8 +367,32 @@
                     <label>Endereço:</label>
                     <span id="clienteEndereco"></span>
                 </div>
+                <div class="info-group">
+                    <label>Etapa no Funil:</label>
+                    <form id="funnelStageForm" onsubmit="atualizarEtapaFunil(event)">
+                        <select id="funnelStage" name="funnelStage" required>
+                            <option value="Lead">Lead</option>
+                            <option value="Contato Realizado">Contato Realizado</option>
+                            <option value="Proposta Enviada">Proposta Enviada</option>
+                            <option value="Negociação">Negociação</option>
+                            <option value="Fechamento">Fechamento</option>
+                        </select>
+                        <button type="submit">Atualizar</button>
+                    </form>
+                </div>
+                <div class="sales">
+                    <h3>Vendas Emitidas</h3>
+                    <ul id="salesList"></ul>
+                </div>
+                <div class="notes">
+                    <h3>Anotações</h3>
+                    <textarea id="anotacoes" placeholder="Escreva suas anotações aqui..."></textarea>
+                    <button id="salvarAnotacaoBtn" class="btn-submit">Salvar Anotação</button>
+                    <input type="file" id="anexos" multiple>
+                    <ul id="notesList"></ul>
+                </div>
                 <div class="actions">
-                    <button class="edit">Editar</button>
+                    <button class="edit" onclick="editarCliente()">Editar</button>
                     <button class="delete">Excluir</button>
                     <button class="venda" onclick="registrarVenda()">Registrar Venda</button>
                     <button class="boleto">Emitir Boleto</button>
@@ -272,10 +401,5 @@
             </div>
         </div>
     </div>
-    <script>
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('hidden');
-        }
-    </script>
 </body>
 </html>

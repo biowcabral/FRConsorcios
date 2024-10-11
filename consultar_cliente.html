@@ -231,6 +231,7 @@
     <!-- Adicione os scripts do Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script>
         // Configuração do Firebase
         const firebaseConfig = {
@@ -246,33 +247,90 @@
         // Inicializar o Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            auth.onAuthStateChanged(user => {
+                if (!user) {
+                    window.location.href = 'login.html'; // Redirecionar para a página de login se não estiver autenticado
+                } else {
+                    document.getElementById('userName').textContent = user.displayName || 'Usuário';
+                }
+            });
+        });
+
+        function normalizarTexto(texto) {
+            return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+        }
+
+        async function buscarClientePorCpf(cpf) {
+            try {
+                const clienteDoc = await db.collection("clientes").doc(cpf).get();
+                console.log("ClienteDoc:", clienteDoc);
+                if (!clienteDoc.exists) {
+                    alert("Nenhum cliente encontrado.");
+                    return;
+                }
+                return clienteDoc.data();
+            } catch (error) {
+                console.error("Erro ao buscar cliente por CPF: ", error);
+            }
+        }
+
+        async function buscarClientePorNome(nome) {
+            try {
+                const nomeNormalizado = normalizarTexto(nome);
+                const query = db.collection("clientes")
+                    .where("nomeCompletoNormalizado", ">=", nomeNormalizado)
+                    .where("nomeCompletoNormalizado", "<=", nomeNormalizado + '\uf8ff');
+                const snapshot = await query.get();
+                console.log("Snapshot:", snapshot);
+                if (snapshot.empty) {
+                    alert("Nenhum cliente encontrado.");
+                    return;
+                }
+                return snapshot.docs[0].data();
+            } catch (error) {
+                console.error("Erro ao buscar cliente por nome: ", error);
+            }
+        }
 
         async function buscarCliente(event) {
             event.preventDefault();
-            const cpf = document.getElementById('cpf').value;
+            const input = document.getElementById('cpf').value.trim();
 
-            if (cpf === "") {
-                alert("Por favor, informe o CPF.");
+            if (input === "") {
+                alert("Por favor, informe o CPF ou Nome.");
                 return;
             }
 
-            try {
-                const docRef = db.collection("clientes").doc(cpf);
-                const doc = await docRef.get();
-                if (doc.exists) {
-                    const cliente = doc.data();
-                    document.getElementById('clienteNome').innerText = cliente.nomeCompleto;
-                    document.getElementById('clienteCpf').innerText = cliente.cpf;
-                    document.getElementById('clienteTelefone').innerText = cliente.numeroTelefone;
-                    document.getElementById('clienteEndereco').innerText = `${cliente.rua}, ${cliente.numeroCasa}, ${cliente.complemento}, ${cliente.cidade}, ${cliente.estado}, ${cliente.cep}`;
-                    document.querySelector('.cliente-info').style.display = 'block';
-                    document.getElementById('clienteLink').href = `cliente_detalhes.html?cpf=${cliente.cpf}`;
-                } else {
-                    alert("Cliente não encontrado.");
-                }
-            } catch (error) {
-                console.error("Erro ao buscar cliente: ", error);
+            let cliente;
+            const primeiroDigito = input.charAt(0);
+            if (!isNaN(primeiroDigito)) {
+                cliente = await buscarClientePorCpf(input);
+            } else {
+                cliente = await buscarClientePorNome(input);
             }
+
+            if (cliente) {
+                document.getElementById('clienteNome').innerText = cliente.nomeCompleto;
+                document.getElementById('clienteCpf').innerText = cliente.cpf;
+                document.getElementById('clienteTelefone').innerText = cliente.numeroTelefone;
+                document.getElementById('clienteEndereco').innerText = `${cliente.rua}, ${cliente.numeroCasa}, ${cliente.complemento}, ${cliente.cidade}, ${cliente.estado}, ${cliente.cep}`;
+                document.querySelector('.cliente-info').style.display = 'block';
+                
+                // Armazenar dados no localStorage
+                localStorage.setItem('cpfCliente', cliente.cpf);
+                localStorage.setItem('nomeCompletoCliente', cliente.nomeCompleto);
+                localStorage.setItem('telefoneCliente', cliente.numeroTelefone);
+                localStorage.setItem('enderecoCliente', `${cliente.rua}, ${cliente.numeroCasa}, ${cliente.complemento}, ${cliente.cidade}, ${cliente.estado}, ${cliente.cep}`);
+                
+                document.getElementById('clienteLink').href = `cliente_detalhes.html`;
+            }
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('hidden');
         }
     </script>
 </head>
@@ -297,15 +355,18 @@
                 </div>
             </div>
             <div class="user-info">
-                <i class="fas fa-user fa-2x"></i>
-                <span>Nome do Usuário</span>
+                <a href="gerenciar_dados.html" class="profile-link">
+                    <img src="user-avatar.jpeg" alt="Perfil" style="width: 40px; height: 40px; border-radius: 50%;">
+                    <br>
+                    <span id="userName">Nome do Usuário</span> <!-- Nome inicial será atualizado pelo Firebase -->
+                </a>
             </div>
         </div>
         <div class="container">
             <h2>Consultar Cliente</h2>
             <form id="buscarClienteForm" onsubmit="buscarCliente(event)">
                 <div class="form-group">
-                    <label for="cpf">CPF</label>
+                    <label for="cpf">CPF ou Nome</label>
                     <input type="text" id="cpf" name="cpf" required>
                 </div>
                 <div class="form-group">
@@ -334,10 +395,5 @@
             </div>
         </div>
     </div>
-    <script>
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('hidden');
-        }
-    </script>
 </body>
 </html>

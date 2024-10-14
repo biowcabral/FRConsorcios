@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório de Marketing - FR Consórcio</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .chart-container {
+            margin-bottom: 40px;
+        }
+        .chart-container canvas {
+            width: 100%;
+            height: 400px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 40px;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .form-container {
+            margin-bottom: 40px;
+        }
+        .form-container input, .form-container button {
+            padding: 10px;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Relatório de Marketing</h1>
+
+        <!-- Formulário para Inserção de Dados -->
+        <div class="form-container">
+            <h2>Inserir Dados de Marketing</h2>
+            <form id="marketingForm">
+                <input type="week" id="semana" required>
+                <input type="number" step="0.01" id="investimento" placeholder="Investimento (R$)" required>
+                <input type="number" id="cadastros" placeholder="Número de Cadastros" required>
+                <input type="number" step="0.01" id="cpm" placeholder="Custo por Mil Impressões (CPM) (R$)" required>
+                <input type="number" step="0.01" id="ctr" placeholder="Taxa de Clique no Link (CTR) (%)" required>
+                <button type="submit">Adicionar Dados</button>
+            </form>
+        </div>
+
+        <!-- Gráficos -->
+        <div class="chart-container">
+            <h2>Investimento por Semana</h2>
+            <canvas id="investimentoChart"></canvas>
+        </div>
+
+        <div class="chart-container">
+            <h2>Número de Cadastros por Semana</h2>
+            <canvas id="cadastrosChart"></canvas>
+        </div>
+
+        <div class="chart-container">
+            <h2>Custo por Cadastro por Semana</h2>
+            <canvas id="custoCadastroChart"></canvas>
+        </div>
+
+        <div class="chart-container">
+            <h2>Custo por Mil Impressões (CPM) por Semana</h2>
+            <canvas id="cpmChart"></canvas>
+        </div>
+
+        <div class="chart-container">
+            <h2>Taxa de Clique no Link (CTR) por Semana</h2>
+            <canvas id="ctrChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyD_YXnid23lFBvvMftPOA8A9iqCMi6Uejs",
+            authDomain: "gescon-684aa.firebaseapp.com",
+            projectId: "gescon-684aa",
+            storageBucket: "gescon-684aa.appspot.com",
+            messagingSenderId: "854894210731",
+            appId: "1:854894210731:web:8fb476fbcb76bd7ec291ee",
+            measurementId: "G-RZKSQ0HPGL"
+        };
+
+        // Inicializar o Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // Função para criar gráficos
+        function createChart(ctx, type, data, label) {
+            return new Chart(ctx, {
+                type: type,
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: label,
+                        data: data.values,
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Função para atualizar os gráficos com novos dados
+        function updateCharts(data) {
+            investimentoChart.data.labels = data.labels;
+            investimentoChart.data.datasets[0].data = data.investimento;
+            investimentoChart.update();
+
+            cadastrosChart.data.labels = data.labels;
+            cadastrosChart.data.datasets[0].data = data.cadastros;
+            cadastrosChart.update();
+
+            custoCadastroChart.data.labels = data.labels;
+            custoCadastroChart.data.datasets[0].data = data.custoCadastro;
+            custoCadastroChart.update();
+
+            cpmChart.data.labels = data.labels;
+            cpmChart.data.datasets[0].data = data.cpm;
+            cpmChart.update();
+
+            ctrChart.data.labels = data.labels;
+            ctrChart.data.datasets[0].data = data.ctr;
+            ctrChart.update();
+        }
+
+        // Função para carregar dados do Firestore e atualizar os gráficos
+        async function loadData() {
+            const snapshot = await db.collection('marketing').orderBy('semana').get();
+            const data = {
+                labels: [],
+                investimento: [],
+                cadastros: [],
+                custoCadastro: [],
+                cpm: [],
+                ctr: []
+            };
+
+            snapshot.forEach(doc => {
+                const docData = doc.data();
+                data.labels.push(docData.semana);
+                data.investimento.push(docData.investimento);
+                data.cadastros.push(docData.cadastros);
+                data.custoCadastro.push(docData.custoCadastro);
+                data.cpm.push(docData.cpm);
+                data.ctr.push(docData.ctr);
+            });
+
+            updateCharts(data);
+        }
+
+        // Criar gráficos
+        const investimentoChart = createChart(document.getElementById('investimentoChart'), 'bar', { labels: [], values: [] }, 'Investimento (R$)');
+        const cadastrosChart = createChart(document.getElementById('cadastrosChart'), 'bar', { labels: [], values: [] }, 'Número de Cadastros');
+        const custoCadastroChart = createChart(document.getElementById('custoCadastroChart'), 'bar', { labels: [], values: [] }, 'Custo por Cadastro (R$)');
+        const cpmChart = createChart(document.getElementById('cpmChart'), 'bar', { labels: [], values: [] }, 'Custo por Mil Impressões (CPM) (R$)');
+        const ctrChart = createChart(document.getElementById('ctrChart'), 'bar', { labels: [], values: [] }, 'Taxa de Clique no Link (CTR) (%)');
+
+        // Carregar dados do Firestore ao carregar a página
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                loadData();
+            } else {
+                // Redirecionar para a página de login ou mostrar uma mensagem de erro
+                console.log("Usuário não autenticado");
+            }
+        });
+
+        // Manipular o envio do formulário
+        document.getElementById('marketingForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const semana = document.getElementById('semana').value;
+            const investimento = parseFloat(document.getElementById('investimento').value);
+            const cadastros = parseInt(document.getElementById('cadastros').value);
+            const custoCadastro = investimento / cadastros;
+            const cpm = parseFloat(document.getElementById('cpm').value);
+            const ctr = parseFloat(document.getElementById('ctr').value);
+
+            // Salvar dados no Firestore com ID personalizado
+            await db.collection('marketing').doc(semana).set({
+                semana,
+                investimento,
+                cadastros,
+                custoCadastro,
+                cpm,
+                ctr
+            });
+
+            // Recarregar dados e atualizar gráficos
+            loadData();
+
+            // Limpar formulário
+            document.getElementById('marketingForm').reset();
+        });
+
+        // Autenticação anônima para fins de teste
+        auth.signInAnonymously().catch(error => {
+            console.error("Erro ao autenticar anonimamente:", error);
+        });
+    </script>
+</body>
+</html>

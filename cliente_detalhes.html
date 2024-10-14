@@ -204,9 +204,30 @@
         .notes input[type="file"] {
             margin-top: 10px;
         }
+        .sales-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .sales-table th, .sales-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .sales-table th {
+            background-color: #f2f2f2;
+            color: #333;
+        }
+        .sales-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .sales-table tr:hover {
+            background-color: #f1f1f1;
+        }
     </style>
     <!-- Adicione os scripts do Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
     <script>
@@ -220,25 +241,38 @@
             appId: "1:854894210731:web:8fb476fbcb76bd7ec291ee",
             measurementId: "G-RZKSQ0HPGL"
         };
-
+    
         // Inicializar o Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const storage = firebase.storage();
-
+    
+        firebase.auth().onAuthStateChanged(user => {
+            if (user) {
+                // Usuário está autenticado, buscar vendas
+                const cpf = localStorage.getItem('cpfCliente');
+            } else {
+                // Redirecionar para a página de login se o usuário não estiver autenticado
+                window.location.href = 'login.html';
+            }
+        });
+    
         document.addEventListener('DOMContentLoaded', () => {
             // Recuperar dados do localStorage
             const cpf = localStorage.getItem('cpfCliente');
             const nome = localStorage.getItem('nomeCompletoCliente');
             const telefone = localStorage.getItem('telefoneCliente');
             const endereco = localStorage.getItem('enderecoCliente');
-
+    
             // Exibir dados na página
             document.getElementById('clienteCpf').innerText = cpf;
             document.getElementById('clienteNome').innerText = nome;
             document.getElementById('clienteTelefone').innerText = telefone;
             document.getElementById('clienteEndereco').innerText = endereco;
-
+    
+            // Buscar e exibir vendas
+            buscarVendas(cpf);
+    
             document.getElementById('salvarAnotacaoBtn').addEventListener('click', () => {
                 const anotacao = document.getElementById('anotacoes').value;
                 if (anotacao.trim() !== '') {
@@ -247,7 +281,7 @@
                     alert('Por favor, escreva uma anotação.');
                 }
             });
-
+    
             document.getElementById('anexos').addEventListener('change', (event) => {
                 const arquivos = event.target.files;
                 if (arquivos.length > 0) {
@@ -257,6 +291,36 @@
                 }
             });
         });
+    
+        async function buscarVendas(cpf) {
+            try {
+                const salesList = document.getElementById('salesList');
+                salesList.innerHTML = ''; // Limpar a lista antes de adicionar novos itens
+    
+                const vendasSnapshot = await db.collection('clientes').doc(cpf).collection('vendas').get();
+                vendasSnapshot.forEach(doc => {
+                    const venda = doc.data();
+                    const vendedor = venda.vendedor || 'N/A';
+                    const administradora = venda.administradora || 'N/A';
+                    const produto = venda.produto || 'N/A';
+                    const valor = venda.valorCredito !== undefined ? venda.valorCredito : 0;
+                    const dataHoraCadastro = venda.dataHoraCadastro ? new Date(venda.dataHoraCadastro.seconds * 1000).toLocaleString() : 'N/A';
+    
+                    const formattedValue = `R$ ${valor.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&.').replace(/\.(\d{2})$/, ',$1')}`;
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${vendedor}</td>
+                        <td>${administradora}</td>
+                        <td>${produto}</td>
+                        <td>${formattedValue}</td>
+                        <td>${dataHoraCadastro}</td>
+                    `;
+                    salesList.appendChild(tr);
+                });
+            } catch (error) {
+                console.error('Erro ao buscar vendas:', error);
+            }
+        }
 
         async function salvarAnotacao(cpf, anotacao) {
             try {
@@ -382,7 +446,18 @@
                 </div>
                 <div class="sales">
                     <h3>Vendas Emitidas</h3>
-                    <ul id="salesList"></ul>
+                    <table class="sales-table">
+                        <thead>
+                            <tr>
+                                <th>Vendedor</th>
+                                <th>Administradora</th>
+                                <th>Produto</th>
+                                <th>Valor</th>
+                                <th>Data</th>
+                            </tr>
+                        </thead>
+                        <tbody id="salesList"></tbody>
+                    </table>
                 </div>
                 <div class="notes">
                     <h3>Anotações</h3>

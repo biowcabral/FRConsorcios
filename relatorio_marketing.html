@@ -6,6 +6,7 @@
     <title>Relatório de Marketing - FR Consórcio</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
@@ -56,14 +57,46 @@
             padding: 10px;
             margin: 5px;
         }
+        .button-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .button-container button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        .login-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .login-container input, .login-container button {
+            padding: 10px;
+            margin: 5px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Relatório de Marketing</h1>
 
+        <!-- Formulário de Login -->
+        <div class="login-container">
+            <h2>Login</h2>
+            <input type="email" id="email" placeholder="Email" required>
+            <input type="password" id="password" placeholder="Senha" required>
+            <button id="loginButton">Login</button>
+            <div id="loginError" style="color: red;"></div>
+        </div>
+
+        <!-- Botões para alternar entre visualização semanal e mensal -->
+        <div class="button-container" style="display: none;">
+            <button id="weeklyButton">Relatório Semanal</button>
+            <button id="monthlyButton">Relatório Mensal</button>
+        </div>
+
         <!-- Formulário para Inserção de Dados -->
-        <div class="form-container">
+        <div class="form-container" style="display: none;">
             <h2>Inserir Dados de Marketing</h2>
             <form id="marketingForm">
                 <input type="week" id="semana" required>
@@ -76,28 +109,28 @@
         </div>
 
         <!-- Gráficos -->
-        <div class="chart-container">
-            <h2>Investimento por Semana</h2>
+        <div class="chart-container" style="display: none;">
+            <h2>Investimento por Semana/Mês</h2>
             <canvas id="investimentoChart"></canvas>
         </div>
 
-        <div class="chart-container">
-            <h2>Número de Cadastros por Semana</h2>
+        <div class="chart-container" style="display: none;">
+            <h2>Número de Cadastros por Semana/Mês</h2>
             <canvas id="cadastrosChart"></canvas>
         </div>
 
-        <div class="chart-container">
-            <h2>Custo por Cadastro por Semana</h2>
+        <div class="chart-container" style="display: none;">
+            <h2>Custo por Cadastro por Semana/Mês</h2>
             <canvas id="custoCadastroChart"></canvas>
         </div>
 
-        <div class="chart-container">
-            <h2>Custo por Mil Impressões (CPM) por Semana</h2>
+        <div class="chart-container" style="display: none;">
+            <h2>Custo por Mil Impressões (CPM) por Semana/Mês</h2>
             <canvas id="cpmChart"></canvas>
         </div>
 
-        <div class="chart-container">
-            <h2>Taxa de Clique no Link (CTR) por Semana</h2>
+        <div class="chart-container" style="display: none;">
+            <h2>Taxa de Clique no Link (CTR) por Semana/Mês</h2>
             <canvas id="ctrChart"></canvas>
         </div>
     </div>
@@ -134,12 +167,23 @@
                     }]
                 },
                 options: {
+                    plugins: {
+                        datalabels: {
+                            anchor: 'end',
+                            align: 'end',
+                            color: 'black',
+                            font: {
+                                weight: 'bold'
+                            }
+                        }
+                    },
                     scales: {
                         y: {
                             beginAtZero: true
                         }
                     }
-                }
+                },
+                plugins: [ChartDataLabels]
             });
         }
 
@@ -166,9 +210,28 @@
             ctrChart.update();
         }
 
+        // Função para formatar a data no formato "Agosto-2024"
+        function formatMonthYear(dateString) {
+            const [year, month] = dateString.split("-");
+            const date = new Date(year, month - 1);
+            const options = { year: 'numeric', month: 'long' };
+            return date.toLocaleDateString('pt-BR', options);
+        }
+
+        // Função para obter a data da segunda-feira de uma semana
+        function getMonday(weekString) {
+            const [year, week] = weekString.split('-W');
+            const firstDayOfYear = new Date(year, 0, 1);
+            const daysOffset = (week - 1) * 7;
+            const monday = new Date(firstDayOfYear.setDate(firstDayOfYear.getDate() + daysOffset));
+            const dayOfWeek = monday.getDay();
+            const diff = monday.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+            return new Date(monday.setDate(diff));
+        }
+
         // Função para carregar dados do Firestore e atualizar os gráficos
-        async function loadData() {
-            const snapshot = await db.collection('marketing').orderBy('semana').get();
+        async function loadData(viewMode) {
+            let snapshot;
             const data = {
                 labels: [],
                 investimento: [],
@@ -178,15 +241,54 @@
                 ctr: []
             };
 
-            snapshot.forEach(doc => {
-                const docData = doc.data();
-                data.labels.push(docData.semana);
-                data.investimento.push(docData.investimento);
-                data.cadastros.push(docData.cadastros);
-                data.custoCadastro.push(docData.custoCadastro);
-                data.cpm.push(docData.cpm);
-                data.ctr.push(docData.ctr);
-            });
+            if (viewMode === 'mensal') {
+                snapshot = await db.collection('marketing').get();
+                const monthlyData = {};
+
+                snapshot.forEach(doc => {
+                    const docData = doc.data();
+                    const month = docData.semana.substring(0, 7); // Extrair ano e mês
+
+                    if (!monthlyData[month]) {
+                        monthlyData[month] = {
+                            investimento: 0,
+                            cadastros: 0,
+                            custoCadastro: 0,
+                            cpm: 0,
+                            ctr: 0,
+                            count: 0
+                        };
+                    }
+                    
+                    monthlyData[month].investimento += docData.investimento;
+                    monthlyData[month].cadastros += docData.cadastros;
+                    monthlyData[month].custoCadastro += docData.custoCadastro;
+                    monthlyData[month].cpm += docData.cpm;
+                    monthlyData[month].ctr += docData.ctr;
+                    monthlyData[month].count += 1;
+                    });
+                    
+                    for (const month in monthlyData) {
+                        data.labels.push(formatMonthYear(month));
+                        data.investimento.push(monthlyData[month].investimento.toFixed(2));
+                        data.cadastros.push(monthlyData[month].cadastros.toFixed(2));
+                        data.custoCadastro.push((monthlyData[month].custoCadastro / monthlyData[month].count).toFixed(2));
+                        data.cpm.push((monthlyData[month].cpm / monthlyData[month].count).toFixed(2));
+                        data.ctr.push((monthlyData[month].ctr / monthlyData[month].count).toFixed(2));
+                    }
+                    } else {
+                        snapshot = await db.collection('marketing').orderBy('semana').get();
+                    
+                        snapshot.forEach(doc => {
+                            const docData = doc.data();
+                            data.labels.push(docData.semana);
+                            data.investimento.push(docData.investimento.toFixed(2));
+                            data.cadastros.push(docData.cadastros.toFixed(2));
+                            data.custoCadastro.push(docData.custoCadastro.toFixed(2));
+                            data.cpm.push(docData.cpm.toFixed(2));
+                            data.ctr.push(docData.ctr.toFixed(2));
+                        });
+                    }
 
             updateCharts(data);
         }
@@ -198,14 +300,35 @@
         const cpmChart = createChart(document.getElementById('cpmChart'), 'bar', { labels: [], values: [] }, 'Custo por Mil Impressões (CPM) (R$)');
         const ctrChart = createChart(document.getElementById('ctrChart'), 'bar', { labels: [], values: [] }, 'Taxa de Clique no Link (CTR) (%)');
 
-        // Carregar dados do Firestore ao carregar a página
-        auth.onAuthStateChanged(user => {
-            if (user) {
-                loadData();
-            } else {
-                // Redirecionar para a página de login ou mostrar uma mensagem de erro
-                console.log("Usuário não autenticado");
+        // Função para mostrar elementos após login
+        function showElementsAfterLogin() {
+            document.querySelectorAll('.button-container, .form-container, .chart-container').forEach(el => {
+                el.style.display = 'block';
+            });
+            document.querySelector('.login-container').style.display = 'none';
+        }
+
+        // Manipular o login
+        document.getElementById('loginButton').addEventListener('click', async function() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+                showElementsAfterLogin();
+                loadData('semanal'); // Carregar dados semanais por padrão
+            } catch (error) {
+                document.getElementById('loginError').textContent = "Erro ao fazer login: " + error.message;
             }
+        });
+
+        // Atualizar gráficos ao clicar nos botões
+        document.getElementById('weeklyButton').addEventListener('click', function() {
+            loadData('semanal');
+        });
+
+        document.getElementById('monthlyButton').addEventListener('click', function() {
+            loadData('mensal');
         });
 
         // Manipular o envio do formulário
@@ -219,9 +342,12 @@
             const cpm = parseFloat(document.getElementById('cpm').value);
             const ctr = parseFloat(document.getElementById('ctr').value);
 
+            // Obter a data da segunda-feira da semana selecionada
+            const mondayDate = getMonday(semana);
+
             // Salvar dados no Firestore com ID personalizado
-            await db.collection('marketing').doc(semana).set({
-                semana,
+            await db.collection('marketing').doc(mondayDate.toISOString().split('T')[0]).set({
+                semana: mondayDate.toISOString().split('T')[0],
                 investimento,
                 cadastros,
                 custoCadastro,
@@ -230,15 +356,19 @@
             });
 
             // Recarregar dados e atualizar gráficos
-            loadData();
+            const viewMode = document.querySelector('.button-container button.active')?.id === 'weeklyButton' ? 'semanal' : 'mensal';
+            loadData(viewMode);
 
             // Limpar formulário
             document.getElementById('marketingForm').reset();
         });
 
-        // Autenticação anônima para fins de teste
-        auth.signInAnonymously().catch(error => {
-            console.error("Erro ao autenticar anonimamente:", error);
+        // Verificar se o usuário está logado ao carregar a página
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                showElementsAfterLogin();
+                loadData('semanal'); // Carregar dados semanais por padrão
+            }
         });
     </script>
 </body>

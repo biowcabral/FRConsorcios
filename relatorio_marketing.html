@@ -259,36 +259,36 @@
                             count: 0
                         };
                     }
-                    
+
                     monthlyData[month].investimento += docData.investimento;
                     monthlyData[month].cadastros += docData.cadastros;
                     monthlyData[month].custoCadastro += docData.custoCadastro;
                     monthlyData[month].cpm += docData.cpm;
                     monthlyData[month].ctr += docData.ctr;
                     monthlyData[month].count += 1;
-                    });
-                    
-                    for (const month in monthlyData) {
-                        data.labels.push(formatMonthYear(month));
-                        data.investimento.push(monthlyData[month].investimento.toFixed(2));
-                        data.cadastros.push(monthlyData[month].cadastros.toFixed(2));
-                        data.custoCadastro.push((monthlyData[month].custoCadastro / monthlyData[month].count).toFixed(2));
-                        data.cpm.push((monthlyData[month].cpm / monthlyData[month].count).toFixed(2));
-                        data.ctr.push((monthlyData[month].ctr / monthlyData[month].count).toFixed(2));
-                    }
-                    } else {
-                        snapshot = await db.collection('marketing').orderBy('semana').get();
-                    
-                        snapshot.forEach(doc => {
-                            const docData = doc.data();
-                            data.labels.push(docData.semana);
-                            data.investimento.push(docData.investimento.toFixed(2));
-                            data.cadastros.push(docData.cadastros.toFixed(2));
-                            data.custoCadastro.push(docData.custoCadastro.toFixed(2));
-                            data.cpm.push(docData.cpm.toFixed(2));
-                            data.ctr.push(docData.ctr.toFixed(2));
-                        });
-                    }
+                });
+
+                for (const month in monthlyData) {
+                    data.labels.push(formatMonthYear(month));
+                    data.investimento.push(monthlyData[month].investimento);
+                    data.cadastros.push(monthlyData[month].cadastros);
+                    data.custoCadastro.push(monthlyData[month].custoCadastro / monthlyData[month].count);
+                    data.cpm.push(monthlyData[month].cpm / monthlyData[month].count);
+                    data.ctr.push(monthlyData[month].ctr / monthlyData[month].count);
+                }
+            } else {
+                snapshot = await db.collection('marketing').orderBy('semana').get();
+
+                snapshot.forEach(doc => {
+                    const docData = doc.data();
+                    data.labels.push(docData.semana);
+                    data.investimento.push(docData.investimento);
+                    data.cadastros.push(docData.cadastros);
+                    data.custoCadastro.push(docData.custoCadastro);
+                    data.cpm.push(docData.cpm);
+                    data.ctr.push(docData.ctr);
+                });
+            }
 
             updateCharts(data);
         }

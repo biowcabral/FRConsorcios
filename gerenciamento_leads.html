@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciamento de Leads - FR Consórcio</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #f0f0f0;
+        }
+        .sidebar {
+            width: 250px;
+            background-color: #007BFF;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+        .sidebar.hidden {
+            transform: translateX(-250px);
+        }
+        .sidebar .toggle-sidebar-button {
+            position: absolute;
+            top: 10px;
+            right: -40px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: right 0.3s ease;
+        }
+        .sidebar.hidden .toggle-sidebar-button {
+            right: -40px;
+        }
+        .sidebar h2 {
+            margin: 0;
+            margin-bottom: 20px;
+        }
+        .sidebar a {
+            color: white;
+            text-decoration: none;
+            margin: 10px 0;
+            width: 100%;
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .sidebar a:hover {
+            background-color: #0056b3;
+        }
+        .main-content {
+            flex-grow: 1;
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            width: calc(100% - 250px); /* Espaçamento inicial para a barra lateral */
+            transition: width 0.3s ease, margin-left 0.3s ease;
+            margin-left: 250px;
+        }
+        .sidebar.hidden ~ .main-content {
+            width: calc(100% - 30px); /* Espaçamento quando a barra lateral está minimizada */
+            margin-left: 30px;
+        }
+        .header {
+            background-color: #fff;
+            padding: 20px 40px; /* Aumentar o padding horizontal para deixar o cabeçalho mais largo */
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: center; /* Centraliza o cabeçalho */
+            align-items: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 1.5em;
+            color: #333;
+        }
+        .header .user-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: absolute;
+            right: 20px;
+            word-break: break-word; /* Permitir quebra de linha no nome do usuário */
+        }
+        .header .user-info i {
+            font-size: 2em;
+            color: #007BFF;
+        }
+        .header .user-info span {
+            margin-top: 5px;
+            font-size: 1em;
+            color: #333;
+        }
+        .funnel {
+            display: flex;
+            gap: 20px;
+            overflow-x: auto;
+            padding: 20px 0;
+            flex-wrap: nowrap; /* Manter os estágios em uma única linha */
+        }
+        .funnel-stage {
+            flex-grow: 1;
+            min-width: 300px; /* Largura mínima para os estágios */
+            background-color: #fff;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .funnel-stage h2 {
+            margin: 0;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+            color: #333;
+        }
+        .lead-card {
+            background-color: #fff;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            cursor: grab;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-width: 250px; /* Largura mínima para os cards */
+        }
+        .lead-card p {
+            margin: 0;
+            font-size: 0.9em;
+            color: #555;
+        }
+        .lead-card .lead-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .lead-card .lead-header h3 {
+            margin: 0;
+            font-size: 1.1em;
+            color: #333;
+        }
+        .lead-card .lead-header .lead-score {
+            background-color: #007BFF;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.9em;
+        }
+        .lead-card .lead-details {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .lead-card .lead-details p {
+            display: flex;
+            justify-content: space-between;
+        }
+        .lead-card .lead-details p span {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar" id="sidebar">
+        <button class="toggle-sidebar-button" onclick="toggleSidebar()">☰</button>
+        <h2>FR Consórcio</h2>
+        <a href="dashboard.html">Home</a>
+        <a href="cadastro_cliente.html">Cadastrar Cliente</a>
+        <a href="consultar_cliente.html">Consultar Cliente</a>
+        <a href="relatorio_vendas.html">Relatório Vendas</a>
+        <a href="relatorio_marketing.html">Relatório de Marketing</a>
+        <a href="gerenciamento_leads.html">Gerenciamento de Leads</a>
+        <a href="#">Relatório de Clientes</a>
+        <a href="#">Emitir Boletos</a>
+        <a href="#">Lançar Lance em Lote</a>
+        <a href="#">Cadastrar Usuário</a>
+    </div>
+    <div class="main-content" id="mainContent">
+        <div class="header">
+            <h1>LEAD's</h1>
+            <div class="user-info">
+                <a href="gerenciar_dados.html" class="profile-link">
+                    <img src="user-avatar.jpeg" alt="Perfil" style="width: 40px; height: 40px; border-radius: 50%;">
+                    <br>
+                    <span id="userName">Nome do Usuário</span> <!-- Nome inicial será atualizado pelo Firebase -->
+                </a>
+            </div>
+        </div>
+        <div class="content">
+            <h1>Gerenciamento de Leads</h1>
+            <div class="form-container">
+                <h2>Adicionar Lead</h2>
+                <form id="leadForm">
+                    <input type="text" id="nome" placeholder="Nome" required>
+                    <input type="email" id="email" placeholder="Email" required>
+                    <input type="text" id="telefone" placeholder="Telefone" required>
+                    <button type="submit">Adicionar Lead</button>
+                </form>
+            </div>
+            <div class="funnel">
+                <div class="funnel-stage" data-stage="sem_contato">
+                    <h2>Sem Contato</h2>
+                </div>
+                <div class="funnel-stage" data-stage="contato_feito">
+                    <h2>Contato Feito</h2>
+                </div>
+                <div class="funnel-stage" data-stage="sem_retorno">
+                    <h2>Sem Retorno</h2>
+                </div>
+                <div class="funnel-stage" data-stage="em_negociacao">
+                    <h2>Em Negociação</h2>
+                </div>
+                <div class="funnel-stage" data-stage="proposta_enviada">
+                    <h2>Proposta Enviada</h2>
+                </div>
+                <div class="funnel-stage" data-stage="fechado_falta_pagar">
+                    <h2>Fechado Falta Pagar</h2>
+                </div>
+                <div class="funnel-stage" data-stage="vendido">
+                    <h2>Vendido</h2>
+                </div>
+                <div class="funnel-stage" data-stage="negociacao_futura">
+                    <h2>Negociação Futura</h2>
+                </div>
+                <div class="funnel-stage" data-stage="perdidas_relad">
+                    <h2>Perdidas/Relad</h2>
+                </div>
+                <div class="funnel-stage" data-stage="cancelados">
+                    <h2>Cancelados</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Adicione os scripts do Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <!-- Adicione o script do SortableJS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyD_YXnid23lFBvvMftPOA8A9iqCMi6Uejs",
+            authDomain: "gescon-684aa.firebaseapp.com",
+            projectId: "gescon-684aa",
+            storageBucket: "gescon-684aa.appspot.com",
+            messagingSenderId: "854894210731",
+            appId: "1:854894210731:web:8fb476fbcb76bd7ec291ee",
+            measurementId: "G-RZKSQ0HPGL"
+        };
+
+        // Inicializar o Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    // Carregar dados do usuário
+                    db.collection('users').doc(user.email).get().then((doc) => {
+                        if (doc.exists) {
+                            document.getElementById('userName').textContent = doc.data().name;
+                        } else {
+                            console.log("Nenhum dado encontrado!");
+                        }
+                    }).catch((error) => {
+                        console.log("Erro ao obter documento:", error);
+                    });
+                }
+            });
+
+            // Carregar leads do Firestore
+            db.collection('leads').get().then((querySnapshot) => {
+                querySnapshot.forEach((doc) => {
+                    const lead = doc.data();
+                    lead.id = doc.id;
+                    adicionarLeadAoDOM(lead);
+                });
+            });
+
+            // Inicializar SortableJS para cada etapa do funil
+            const stages = document.querySelectorAll('.funnel-stage');
+            stages.forEach(stage => {
+                new Sortable(stage, {
+                    group: 'leads',
+                    animation: 150,
+                    onEnd: function (evt) {
+                        // Atualizar a etapa do lead no Firebase
+                        const leadId = evt.item.dataset.id;
+                        const newStage = evt.to.dataset.stage;
+                        db.collection('leads').doc(leadId).update({
+                            stage: newStage
+                        }).then(() => {
+                            console.log('Lead atualizado com sucesso!');
+                        }).catch((error) => {
+                            console.error('Erro ao atualizar lead:', error);
+                        });
+                    }
+                });
+            });
+
+            document.getElementById('leadForm').addEventListener('submit', function(event) {
+                event.preventDefault();
+
+                const nome = document.getElementById('nome').value;
+                const email = document.getElementById('email').value;
+                const telefone = document.getElementById('telefone').value;
+
+                adicionarLead(nome, email, telefone);
+                this.reset();
+            });
+        });
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('hidden');
+        }
+
+        function adicionarLead(nome, email, telefone) {
+            const lead = {
+                nome,
+                email,
+                telefone,
+                pontuacao: calcularPontuacao(),
+                stage: 'sem_contato' // Etapa inicial
+            };
+
+            db.collection('leads').add(lead).then((docRef) => {
+                lead.id = docRef.id;
+                adicionarLeadAoDOM(lead);
+            }).catch((error) => {
+                console.error('Erro ao adicionar lead:', error);
+            });
+        }
+
+        function adicionarLeadAoDOM(lead) {
+            const stageElement = document.querySelector(`[data-stage="${lead.stage}"]`);
+            const leadCard = document.createElement('div');
+            leadCard.className = 'lead-card';
+            leadCard.dataset.id = lead.id;
+            leadCard.innerHTML = `
+                <div class="lead-header">
+                    <h3>${lead.nome}</h3>
+                    <div class="lead-score">${lead.pontuacao}</div>
+                </div>
+                <div class="lead-details">
+                    <p><span>Email:</span> ${lead.email}</p>
+                    <p><span>Telefone:</span> ${lead.telefone}</p>
+                </div>
+            `;
+            stageElement.appendChild(leadCard);
+        }
+
+        function calcularPontuacao() {
+            // Implementar lógica de cálculo de pontuação
+            return Math.floor(Math.random() * 100) + 1; // Exemplo: pontuação aleatória entre 1 e 100
+        }
+    </script>
+</body>
+</html>

@@ -23,6 +23,7 @@
             background-color: #fff;
             padding: 20px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: none; /* Ocultar o conteúdo por padrão */
         }
         h1 {
             text-align: center;
@@ -74,14 +75,20 @@
             padding: 10px;
             margin: 5px;
         }
+        .no-access {
+            color: red;
+            font-size: 18px;
+            text-align: center;
+            display: none; /* Ocultar a mensagem de acesso negado por padrão */
+        }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="container" id="contentContainer">
         <h1>Relatório de Marketing</h1>
 
         <!-- Formulário de Login -->
-        <div class="login-container">
+        <div class="login-container" id="loginContainer">
             <h2>Login</h2>
             <input type="email" id="email" placeholder="Email" required>
             <input type="password" id="password" placeholder="Senha" required>
@@ -90,13 +97,13 @@
         </div>
 
         <!-- Botões para alternar entre visualização semanal e mensal -->
-        <div class="button-container" style="display: none;">
+        <div class="button-container" id="buttonContainer">
             <button id="weeklyButton">Relatório Semanal</button>
             <button id="monthlyButton">Relatório Mensal</button>
         </div>
 
         <!-- Formulário para Inserção de Dados -->
-        <div class="form-container" style="display: none;">
+        <div class="form-container" id="formContainer">
             <h2>Inserir Dados de Marketing</h2>
             <form id="marketingForm">
                 <input type="week" id="semana" required>
@@ -109,267 +116,288 @@
         </div>
 
         <!-- Gráficos -->
-        <div class="chart-container" style="display: none;">
+        <div class="chart-container" id="chartContainer1">
             <h2>Investimento por Semana/Mês</h2>
             <canvas id="investimentoChart"></canvas>
         </div>
 
-        <div class="chart-container" style="display: none;">
+        <div class="chart-container" id="chartContainer2">
             <h2>Número de Cadastros por Semana/Mês</h2>
             <canvas id="cadastrosChart"></canvas>
         </div>
 
-        <div class="chart-container" style="display: none;">
+        <div class="chart-container" id="chartContainer3">
             <h2>Custo por Cadastro por Semana/Mês</h2>
             <canvas id="custoCadastroChart"></canvas>
         </div>
 
-        <div class="chart-container" style="display: none;">
+        <div class="chart-container" id="chartContainer4">
             <h2>Custo por Mil Impressões (CPM) por Semana/Mês</h2>
             <canvas id="cpmChart"></canvas>
         </div>
 
-        <div class="chart-container" style="display: none;">
+        <div class="chart-container" id="chartContainer5">
             <h2>Taxa de Clique no Link (CTR) por Semana/Mês</h2>
             <canvas id="ctrChart"></canvas>
         </div>
     </div>
 
-    <script>
-        // Configuração do Firebase
-        const firebaseConfig = {
-            apiKey: "AIzaSyD_YXnid23lFBvvMftPOA8A9iqCMi6Uejs",
-            authDomain: "gescon-684aa.firebaseapp.com",
-            projectId: "gescon-684aa",
-            storageBucket: "gescon-684aa.appspot.com",
-            messagingSenderId: "854894210731",
-            appId: "1:854894210731:web:8fb476fbcb76bd7ec291ee",
-            measurementId: "G-RZKSQ0HPGL"
+<!-- Mensagem de Acesso Negado -->
+<div id="noAccess" class="no-access">
+    <p>Você não tem permissão para acessar esta página.</p>
+</div>
+
+<script>
+    // Configuração do Firebase
+    const firebaseConfig = {
+        apiKey: "AIzaSyD_YXnid23lFBvvMftPOA8A9iqCMi6Uejs",
+        authDomain: "gescon-684aa.firebaseapp.com",
+        projectId: "gescon-684aa",
+        storageBucket: "gescon-684aa.appspot.com",
+        messagingSenderId: "854894210731",
+        appId: "1:854894210731:web:8fb476fbcb76bd7ec291ee",
+        measurementId: "G-RZKSQ0HPGL"
+    };
+
+    // Inicializar o Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    // Função para criar gráficos
+    function createChart(ctx, type, data, label) {
+        return new Chart(ctx, {
+            type: type,
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: label,
+                    data: data.values,
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                plugins: {
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'end',
+                        color: 'black',
+                        font: {
+                            weight: 'bold'
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
+    }
+
+    // Função para atualizar os gráficos com novos dados
+    function updateCharts(data) {
+        investimentoChart.data.labels = data.labels;
+        investimentoChart.data.datasets[0].data = data.investimento;
+        investimentoChart.update();
+
+        cadastrosChart.data.labels = data.labels;
+        cadastrosChart.data.datasets[0].data = data.cadastros;
+        cadastrosChart.update();
+
+        custoCadastroChart.data.labels = data.labels;
+        custoCadastroChart.data.datasets[0].data = data.custoCadastro;
+        custoCadastroChart.update();
+
+        cpmChart.data.labels = data.labels;
+        cpmChart.data.datasets[0].data = data.cpm;
+        cpmChart.update();
+
+        ctrChart.data.labels = data.labels;
+        ctrChart.data.datasets[0].data = data.ctr;
+        ctrChart.update();
+    }
+
+    // Função para formatar a data no formato "Agosto-2024"
+    function formatMonthYear(dateString) {
+        const [year, month] = dateString.split("-");
+        const date = new Date(year, month - 1);
+        const options = { year: 'numeric', month: 'long' };
+        return date.toLocaleDateString('pt-BR', options);
+    }
+
+    // Função para obter a data da segunda-feira de uma semana
+    function getMonday(weekString) {
+        const [year, week] = weekString.split('-W');
+        const firstDayOfYear = new Date(year, 0, 1);
+        const daysOffset = (week - 1) * 7;
+        const monday = new Date(firstDayOfYear.setDate(firstDayOfYear.getDate() + daysOffset));
+        const dayOfWeek = monday.getDay();
+        const diff = monday.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+        return new Date(monday.setDate(diff));
+    }
+
+    // Função para carregar dados do Firestore e atualizar os gráficos
+    async function loadData(viewMode) {
+        let snapshot;
+        const data = {
+            labels: [],
+            investimento: [],
+            cadastros: [],
+            custoCadastro: [],
+            cpm: [],
+            ctr: []
         };
 
-        // Inicializar o Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        const auth = firebase.auth();
+        if (viewMode === 'mensal') {
+            snapshot = await db.collection('marketing').get();
+            const monthlyData = {};
 
-        // Função para criar gráficos
-        function createChart(ctx, type, data, label) {
-            return new Chart(ctx, {
-                type: type,
-                data: {
-                    labels: data.labels,
-                    datasets: [{
-                        label: label,
-                        data: data.values,
-                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    plugins: {
-                        datalabels: {
-                            anchor: 'end',
-                            align: 'end',
-                            color: 'black',
-                            font: {
-                                weight: 'bold'
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                },
-                plugins: [ChartDataLabels]
+            snapshot.forEach(doc => {
+                const docData = doc.data();
+                const month = docData.semana.substring(0, 7); // Extrair ano e mês
+
+                if (!monthlyData[month]) {
+                    monthlyData[month] = {
+                        investimento: 0,
+                        cadastros: 0,
+                        custoCadastro: 0,
+                        cpm: 0,
+                        ctr: 0,
+                        count: 0
+                    };
+                }
+
+                monthlyData[month].investimento += docData.investimento;
+                monthlyData[month].cadastros += docData.cadastros;
+                monthlyData[month].custoCadastro += docData.custoCadastro;
+                monthlyData[month].cpm += docData.cpm;
+                monthlyData[month].ctr += docData.ctr;
+                monthlyData[month].count += 1;
+            });
+
+            for (const month in monthlyData) {
+                data.labels.push(formatMonthYear(month));
+                data.investimento.push(monthlyData[month].investimento);
+                data.cadastros.push(monthlyData[month].cadastros);
+                data.custoCadastro.push(monthlyData[month].custoCadastro / monthlyData[month].count);
+                data.cpm.push(monthlyData[month].cpm / monthlyData[month].count);
+                data.ctr.push(monthlyData[month].ctr / monthlyData[month].count);
+            }
+        } else {
+            snapshot = await db.collection('marketing').orderBy('semana').get();
+
+            snapshot.forEach(doc => {
+                const docData = doc.data();
+                data.labels.push(docData.semana);
+                data.investimento.push(docData.investimento);
+                data.cadastros.push(docData.cadastros);
+                data.custoCadastro.push(docData.custoCadastro);
+                data.cpm.push(docData.cpm);
+                data.ctr.push(docData.ctr);
             });
         }
 
-        // Função para atualizar os gráficos com novos dados
-        function updateCharts(data) {
-            investimentoChart.data.labels = data.labels;
-            investimentoChart.data.datasets[0].data = data.investimento;
-            investimentoChart.update();
+        updateCharts(data);
+    }
 
-            cadastrosChart.data.labels = data.labels;
-            cadastrosChart.data.datasets[0].data = data.cadastros;
-            cadastrosChart.update();
+    // Criar gráficos
+    const investimentoChart = createChart(document.getElementById('investimentoChart'), 'bar', { labels: [], values: [] }, 'Investimento (R$)');
+    const cadastrosChart = createChart(document.getElementById('cadastrosChart'), 'bar', { labels: [], values: [] }, 'Número de Cadastros');
+    const custoCadastroChart = createChart(document.getElementById('custoCadastroChart'), 'bar', { labels: [], values: [] }, 'Custo por Cadastro (R$)');
+    const cpmChart = createChart(document.getElementById('cpmChart'), 'bar', { labels: [], values: [] }, 'Custo por Mil Impressões (CPM) (R$)');
+    const ctrChart = createChart(document.getElementById('ctrChart'), 'bar', { labels: [], values: [] }, 'Taxa de Clique no Link (CTR) (%)');
 
-            custoCadastroChart.data.labels = data.labels;
-            custoCadastroChart.data.datasets[0].data = data.custoCadastro;
-            custoCadastroChart.update();
+    // Função para mostrar elementos após login
+    function showElementsAfterLogin() {
+        document.getElementById('contentContainer').style.display = 'block';
+        document.querySelector('.login-container').style.display = 'none';
+    }
 
-            cpmChart.data.labels = data.labels;
-            cpmChart.data.datasets[0].data = data.cpm;
-            cpmChart.update();
+    // Manipular o login
+    document.getElementById('loginButton').addEventListener('click', async function() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
 
-            ctrChart.data.labels = data.labels;
-            ctrChart.data.datasets[0].data = data.ctr;
-            ctrChart.update();
+        try {
+            await auth.signInWithEmailAndPassword(email, password);
+            const user = auth.currentUser;
+            const doc = await db.collection('users').doc(user.uid).get();
+            if (doc.exists && doc.data().role === 'admin') {
+                showElementsAfterLogin();
+                loadData('semanal'); // Carregar dados semanais por padrão
+            } else {
+                document.getElementById('noAccess').style.display = 'block';
+            }
+        } catch (error) {
+            document.getElementById('loginError').textContent = "Erro ao fazer login: " + error.message;
         }
+    });
 
-        // Função para formatar a data no formato "Agosto-2024"
-        function formatMonthYear(dateString) {
-            const [year, month] = dateString.split("-");
-            const date = new Date(year, month - 1);
-            const options = { year: 'numeric', month: 'long' };
-            return date.toLocaleDateString('pt-BR', options);
-        }
+    // Atualizar gráficos ao clicar nos botões
+    document.getElementById('weeklyButton').addEventListener('click', function() {
+        loadData('semanal');
+    });
 
-        // Função para obter a data da segunda-feira de uma semana
-        function getMonday(weekString) {
-            const [year, week] = weekString.split('-W');
-            const firstDayOfYear = new Date(year, 0, 1);
-            const daysOffset = (week - 1) * 7;
-            const monday = new Date(firstDayOfYear.setDate(firstDayOfYear.getDate() + daysOffset));
-            const dayOfWeek = monday.getDay();
-            const diff = monday.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-            return new Date(monday.setDate(diff));
-        }
+    document.getElementById('monthlyButton').addEventListener('click', function() {
+        loadData('mensal');
+    });
 
-        // Função para carregar dados do Firestore e atualizar os gráficos
-        async function loadData(viewMode) {
-            let snapshot;
-            const data = {
-                labels: [],
-                investimento: [],
-                cadastros: [],
-                custoCadastro: [],
-                cpm: [],
-                ctr: []
-            };
+    // Manipular o envio do formulário
+    document.getElementById('marketingForm').addEventListener('submit', async function(event) {
+        event.preventDefault();
 
-            if (viewMode === 'mensal') {
-                snapshot = await db.collection('marketing').get();
-                const monthlyData = {};
+        const semana = document.getElementById('semana').value;
+        const investimento = parseFloat(document.getElementById('investimento').value);
+        const cadastros = parseInt(document.getElementById('cadastros').value);
+        const custoCadastro = investimento / cadastros;
+        const cpm = parseFloat(document.getElementById('cpm').value);
+        const ctr = parseFloat(document.getElementById('ctr').value);
 
-                snapshot.forEach(doc => {
-                    const docData = doc.data();
-                    const month = docData.semana.substring(0, 7); // Extrair ano e mês
+        // Obter a data da segunda-feira da semana selecionada
+        const mondayDate = getMonday(semana);
 
-                    if (!monthlyData[month]) {
-                        monthlyData[month] = {
-                            investimento: 0,
-                            cadastros: 0,
-                            custoCadastro: 0,
-                            cpm: 0,
-                            ctr: 0,
-                            count: 0
-                        };
+        // Salvar dados no Firestore com ID personalizado
+        await db.collection('marketing').doc(mondayDate.toISOString().split('T')[0]).set({
+            semana: mondayDate.toISOString().split('T')[0],
+            investimento,
+            cadastros,
+            custoCadastro,
+            cpm,
+            ctr
+        });
+
+        // Recarregar dados e atualizar gráficos
+        const viewMode = document.querySelector('.button-container button.active')?.id === 'weeklyButton' ? 'semanal' : 'mensal';
+        loadData(viewMode);
+
+        // Limpar formulário
+        document.getElementById('marketingForm').reset();
+    });
+
+    // Verificar se o usuário está logado ao carregar a página
+    document.addEventListener('DOMContentLoaded', () => {
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                try {
+                    const doc = await db.collection('users').doc(user.uid).get();
+                    if (doc.exists && doc.data().role === 'admin') {
+                        showElementsAfterLogin();
+                    } else {
+                        document.getElementById('noAccess').style.display = 'block';
                     }
-
-                    monthlyData[month].investimento += docData.investimento;
-                    monthlyData[month].cadastros += docData.cadastros;
-                    monthlyData[month].custoCadastro += docData.custoCadastro;
-                    monthlyData[month].cpm += docData.cpm;
-                    monthlyData[month].ctr += docData.ctr;
-                    monthlyData[month].count += 1;
-                });
-
-                for (const month in monthlyData) {
-                    data.labels.push(formatMonthYear(month));
-                    data.investimento.push(monthlyData[month].investimento);
-                    data.cadastros.push(monthlyData[month].cadastros);
-                    data.custoCadastro.push(monthlyData[month].custoCadastro / monthlyData[month].count);
-                    data.cpm.push(monthlyData[month].cpm / monthlyData[month].count);
-                    data.ctr.push(monthlyData[month].ctr / monthlyData[month].count);
+                } catch (error) {
+                    console.error('Erro ao obter documento:', error);
                 }
             } else {
-                snapshot = await db.collection('marketing').orderBy('semana').get();
-
-                snapshot.forEach(doc => {
-                    const docData = doc.data();
-                    data.labels.push(docData.semana);
-                    data.investimento.push(docData.investimento);
-                    data.cadastros.push(docData.cadastros);
-                    data.custoCadastro.push(docData.custoCadastro);
-                    data.cpm.push(docData.cpm);
-                    data.ctr.push(docData.ctr);
-                });
-            }
-
-            updateCharts(data);
-        }
-
-        // Criar gráficos
-        const investimentoChart = createChart(document.getElementById('investimentoChart'), 'bar', { labels: [], values: [] }, 'Investimento (R$)');
-        const cadastrosChart = createChart(document.getElementById('cadastrosChart'), 'bar', { labels: [], values: [] }, 'Número de Cadastros');
-        const custoCadastroChart = createChart(document.getElementById('custoCadastroChart'), 'bar', { labels: [], values: [] }, 'Custo por Cadastro (R$)');
-        const cpmChart = createChart(document.getElementById('cpmChart'), 'bar', { labels: [], values: [] }, 'Custo por Mil Impressões (CPM) (R$)');
-        const ctrChart = createChart(document.getElementById('ctrChart'), 'bar', { labels: [], values: [] }, 'Taxa de Clique no Link (CTR) (%)');
-
-        // Função para mostrar elementos após login
-        function showElementsAfterLogin() {
-            document.querySelectorAll('.button-container, .form-container, .chart-container').forEach(el => {
-                el.style.display = 'block';
-            });
-            document.querySelector('.login-container').style.display = 'none';
-        }
-
-        // Manipular o login
-        document.getElementById('loginButton').addEventListener('click', async function() {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-
-            try {
-                await auth.signInWithEmailAndPassword(email, password);
-                showElementsAfterLogin();
-                loadData('semanal'); // Carregar dados semanais por padrão
-            } catch (error) {
-                document.getElementById('loginError').textContent = "Erro ao fazer login: " + error.message;
+                window.location.href = 'login.html'; // Redireciona para a página de login se não estiver autenticado
             }
         });
-
-        // Atualizar gráficos ao clicar nos botões
-        document.getElementById('weeklyButton').addEventListener('click', function() {
-            loadData('semanal');
-        });
-
-        document.getElementById('monthlyButton').addEventListener('click', function() {
-            loadData('mensal');
-        });
-
-        // Manipular o envio do formulário
-        document.getElementById('marketingForm').addEventListener('submit', async function(event) {
-            event.preventDefault();
-
-            const semana = document.getElementById('semana').value;
-            const investimento = parseFloat(document.getElementById('investimento').value);
-            const cadastros = parseInt(document.getElementById('cadastros').value);
-            const custoCadastro = investimento / cadastros;
-            const cpm = parseFloat(document.getElementById('cpm').value);
-            const ctr = parseFloat(document.getElementById('ctr').value);
-
-            // Obter a data da segunda-feira da semana selecionada
-            const mondayDate = getMonday(semana);
-
-            // Salvar dados no Firestore com ID personalizado
-            await db.collection('marketing').doc(mondayDate.toISOString().split('T')[0]).set({
-                semana: mondayDate.toISOString().split('T')[0],
-                investimento,
-                cadastros,
-                custoCadastro,
-                cpm,
-                ctr
-            });
-
-            // Recarregar dados e atualizar gráficos
-            const viewMode = document.querySelector('.button-container button.active')?.id === 'weeklyButton' ? 'semanal' : 'mensal';
-            loadData(viewMode);
-
-            // Limpar formulário
-            document.getElementById('marketingForm').reset();
-        });
-
-        // Verificar se o usuário está logado ao carregar a página
-        auth.onAuthStateChanged(user => {
-            if (user) {
-                showElementsAfterLogin();
-                loadData('semanal'); // Carregar dados semanais por padrão
-            }
-        });
-    </script>
+    });
+</script>
 </body>
 </html>

@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatórios - FR Consórcio</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #f0f0f0;
+        }
+        .sidebar {
+            width: 250px;
+            background-color: #007BFF;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+        .sidebar.hidden {
+            transform: translateX(-220px);
+        }
+        .sidebar .toggle-sidebar-button {
+            position: absolute;
+            top: 10px;
+            right: -40px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: right 0.3s ease;
+        }
+        .sidebar.hidden .toggle-sidebar-button {
+            right: -40px;
+        }
+        .sidebar h2 {
+            margin: 0;
+            margin-bottom: 20px;
+        }
+        .sidebar a {
+            color: white;
+            text-decoration: none;
+            margin: 10px 0;
+            width: 100%;
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .sidebar a:hover {
+            background-color: #0056b3;
+        }
+        .sidebar .submenu {
+            display: none;
+            flex-direction: column;
+            align-items: flex-start;
+            width: 100%;
+        }
+        .sidebar .submenu a {
+            margin: 5px 0;
+            padding-left: 20px;
+            text-align: left; /* Alinhar texto à esquerda */
+            color: black; /* Cor da fonte preta */
+        }
+        .sidebar .submenu a:hover {
+            background-color: #0056b3;
+            color: white; /* Cor da fonte branca ao passar o mouse */
+        }
+        .sidebar .menu-item {
+            cursor: pointer;
+            width: 100%;
+        }
+        .sidebar .menu-item.active > a {
+            background-color: #0056b3;
+            border: 1px solid #fff; /* Adicionar borda */
+        }
+        .sidebar .menu-item.active .submenu {
+            display: flex;
+        }
+        .main-content {
+            flex-grow: 1;
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            transition: margin-left 0.3s ease;
+            margin-left: 250px; /* Ajuste inicial para a largura da sidebar */
+            overflow-y: auto; /* Adicionar barra de rolagem vertical */
+        }
+        .sidebar.hidden ~ .main-content {
+            margin-left: 30px; /* Ajuste quando a sidebar está encolhida */
+        }
+        .header {
+            background-color: #fff;
+            padding: 10px 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: center; /* Centralizar o título */
+            align-items: center;
+        }
+        .header .user-info {
+            position: absolute;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .header .user-info i {
+            font-size: 2em;
+            color: #007BFF;
+        }
+        .header .user-info span {
+            margin-top: 5px;
+            font-size: 1em;
+            color: #333;
+        }
+        .form-container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            margin: 20px auto;
+        }
+        .form-container h2 {
+            margin-top: 0;
+        }
+        .form-container form {
+            display: flex;
+            flex-direction: column;
+        }
+        .form-container form input,
+        .form-container form select,
+        .form-container form button {
+            margin-bottom: 10px;
+            padding: 10px;
+            font-size: 1em;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .form-container form button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .form-container form button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+    <!-- Adicione os scripts do Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyD_YXnid23lFBvvMftPOA8A9iqCMi6Uejs",
+            authDomain: "gescon-684aa.firebaseapp.com",
+            projectId: "gescon-684aa",
+            storageBucket: "gescon-684aa.appspot.com",
+            messagingSenderId: "854894210731",
+            appId: "1:854894210731:web:8fb476fbcb76bd7ec291ee",
+            measurementId: "G-RZKSQ0HPGL"
+        };
+
+        // Inicializar o Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    // Carregar dados do usuário
+                    db.collection('users').doc(user.email).get().then((doc) => {
+                        if (doc.exists) {
+                            document.getElementById('userName').textContent = doc.data().name;
+                        } else {
+                            console.log("Nenhum dado encontrado!");
+                        }
+                    }).catch((error) => {
+                        console.log("Erro ao obter documento:", error);
+                    });
+
+                    // Carregar vendedores
+                    loadVendedores();
+                }
+            });
+        });
+
+        // Função para carregar vendedores
+        async function loadVendedores() {
+            const vendedorSelect = document.getElementById('vendedor');
+            const snapshot = await db.collection('users').where('role', '==', 'vendedor').get();
+            snapshot.forEach(doc => {
+                const option = document.createElement('option');
+                option.value = doc.id;
+                option.textContent = doc.data().name;
+                vendedorSelect.appendChild(option);
+            });
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('hidden');
+        }
+
+        function toggleSubmenu(event) {
+            const menuItem = event.currentTarget;
+            menuItem.classList.toggle('active');
+        }
+
+        // Função para manipular o envio do formulário
+        async function handleFormSubmit(event) {
+            event.preventDefault();
+
+            const semana = document.getElementById('semana').value;
+            const investimento = parseFloat(document.getElementById('investimento').value);
+            const cadastros = parseInt(document.getElementById('cadastros').value);
+            const vendas = parseInt(document.getElementById('vendas').value);
+            const custoCadastro = investimento / cadastros;
+            const cpm = parseFloat(document.getElementById('cpm').value);
+            const ctr = parseFloat(document.getElementById('ctr').value);
+            const valorVenda = parseFloat(document.getElementById('valorVenda').value);
+            const taxaConversao = (vendas / cadastros) * 100;
+            const vendedor = document.getElementById('vendedor').value || null;
+
+            // Obter a data da segunda-feira da semana selecionada
+            const mondayDate = getMonday(semana);
+
+            // Salvar dados no Firestore com ID personalizado
+            await db.collection('marketing').doc(mondayDate.toISOString().split('T')[0]).set({
+                semana: mondayDate.toISOString().split('T')[0],
+                investimento,
+                cadastros,
+                vendas,
+                custoCadastro,
+                cpm,
+                ctr,
+                valorVenda,
+                taxaConversao,
+                vendedor
+            });
+
+            // Limpar formulário
+            document.getElementById('marketingForm').reset();
+        }
+
+        // Função para obter a data da segunda-feira de uma semana
+        function getMonday(weekString) {
+            const [year, week] = weekString.split('-W');
+            const firstDayOfYear = new Date(year, 0, 1);
+            const daysOffset = (week - 1) * 7;
+            const monday = new Date(firstDayOfYear.setDate(firstDayOfYear.getDate() + daysOffset));
+            const dayOfWeek = monday.getDay();
+            const diff = monday.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+            return new Date(monday.setDate(diff));
+        }
+    </script>
+</head>
+<body>
+    <div class="sidebar" id="sidebar">
+        <button class="toggle-sidebar-button" onclick="toggleSidebar()">☰</button>
+        <h2>Relatórios</h2>
+        <a href="dashboard.html"><i class="fas fa-home"></i> Home</a>
+        <div class="menu-item" onclick="toggleSubmenu(event)">
+            <a style="text-align: center;"><i class="fas fa-chart-pie"></i> Marketing</a>
+            <div class="submenu">
+                <a href="relatorio_marketing_investimento.html"><i class="fas fa-dollar-sign"></i> - Investimento</a>
+                <a href="relatorio_marketing_cadastros.html"><i class="fas fa-user-plus"></i> - Nº de Cadastros</a>
+                <a href="relatorio_marketing_custo_cadastro.html"><i class="fas fa-money-bill-wave"></i> - Custo por Cadastro</a>
+                <a href="relatorio_marketing_cpm.html"><i class="fas fa-bullseye"></i> - CPM</a>
+                <a href="relatorio_marketing_ctr.html"><i class="fas fa-mouse-pointer"></i> - CTR</a>
+                <a href="relatorio_marketing_vendas.html"><i class="fas fa-shopping-cart"></i> - Vendas Marketing</a>
+                <a href="relatorio_marketing_taxa_conversao.html"><i class="fas fa-percentage"></i> - Taxa de Conversão</a>
+            </div>
+        </div>
+        <a href="#"><i class="fas fa-chart-line"></i> Financeiro</a>
+        <a href="#"><i class="fas fa-chart-bar"></i> Comercial</a>
+        <a href="#"><i class="fas fa-chart-area"></i> Administrativo</a>
+        <a href="#"><i class="fas fa-laptop-code"></i> TI e Inovação</a>
+        <a href="#"><i class="fas fa-chart-line"></i> Personalizados/Outros</a>
+    </div>
+    <div class="main-content" id="mainContent">
+        <div class="header">
+            <h1>Bem-vindo aos Relatórios</h1>
+            <div class="user-info">
+                <a href="gerenciar_dados.html" class="profile-link">
+                    <img src="user-avatar.jpeg" alt="Perfil" style="width: 40px; height: 40px; border-radius: 50%;">
+                    <br>
+                    <span id="userName">Nome do Usuário</span> <!-- Nome inicial será atualizado pelo Firebase -->
+                </a>
+            </div>
+        </div>
+        <div class="content">
+            <div class="form-container">
+                <h2>Inserir Dados de Marketing</h2>
+                <form id="marketingForm" onsubmit="handleFormSubmit(event)">
+                    <input type="week" id="semana" required>
+                    <input type="number" step="0.01" id="investimento" placeholder="Investimento (R$)" required>
+                    <input type="number" id="cadastros" placeholder="Número de Cadastros" required>
+                    <input type="number" id="vendas" placeholder="Número de Vendas" required>
+                    <input type="number" step="0.01" id="cpm" placeholder="Custo por Mil Impressões (CPM) (R$)" required>
+                    <input type="number" step="0.01" id="ctr" placeholder="Taxa de Clique no Link (CTR) (%)" required>
+                    <input type="number" step="0.01" id="valorVenda" placeholder="Valor de Venda (R$)" required>
+                    <select id="vendedor">
+                        <option value="">Selecione o Vendedor</option>
+                    </select>
+                    <button type="submit">Adicionar Dados</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
